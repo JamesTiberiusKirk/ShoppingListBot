@@ -35,13 +35,13 @@ func StartBot(token string, debug bool) error {
 	_, err = bot.Request(commands)
 
 	for update := range updates {
-		if update.Message == nil { // If we got a message
+		if update.Message == nil {
 
 			if update.CallbackQuery != nil {
 				log.Printf("[CALLBACK]: %s, DATA: %s", update.CallbackQuery.ID, update.CallbackQuery.Data)
 				log.Printf("%s", update.CallbackQuery.Message.Text)
 
-				if !update.CallbackQuery.Message.IsCommand() { // ignore any non-command Messages
+				if !update.CallbackQuery.Message.IsCommand() {
 					continue
 				}
 
@@ -64,16 +64,9 @@ func StartBot(token string, debug bool) error {
 			continue
 		}
 
-		if !update.Message.IsCommand() { // ignore any non-command Messages
+		if !update.Message.IsCommand() {
 			continue
 		}
-
-		// log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-		// msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-		// msg.ReplyToMessageID = update.Message.MessageID
-		//
-		// bot.Send(msg)
 
 		handler, ok := handlerMap[update.Message.Command()]
 		if !ok {
