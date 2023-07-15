@@ -44,19 +44,6 @@ func buildKeyboard() tgbotapi.ReplyKeyboardMarkup {
 	return kb
 }
 
-// var numericKeyboard = tgbotapi.NewInlineKeyboardMarkup(
-// 	tgbotapi.NewInlineKeyboardRow(
-// 		tgbotapi.NewInlineKeyboardButtonURL("1.com", "http://1.com"),
-// 		tgbotapi.NewInlineKeyboardButtonData("2", "2"),
-// 		tgbotapi.NewInlineKeyboardButtonData("3", "3"),
-// 	),
-// 	tgbotapi.NewInlineKeyboardRow(
-// 		tgbotapi.NewInlineKeyboardButtonData("4", "4"),
-// 		tgbotapi.NewInlineKeyboardButtonData("5", "5"),
-// 		tgbotapi.NewInlineKeyboardButtonData("6", "6"),
-// 	),
-// )
-
 type KeyboardHandler struct {
 	bot *tgbotapi.BotAPI
 }
@@ -68,12 +55,7 @@ func NewKeyboardHandler(bot *tgbotapi.BotAPI) *KeyboardHandler {
 }
 
 func (h *KeyboardHandler) Handle(update tgbotapi.Update) error {
-	// Construct a new message from the given chat ID and containing
-	// the text that we received.
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-
-	// If the message was open, add a copy of our numeric keyboard.
-	// msg.ReplyMarkup = numericKeyboard
 	msg.ReplyMarkup = buildKeyboardInline()
 
 	// Send the message.
