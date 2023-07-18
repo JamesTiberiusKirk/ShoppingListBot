@@ -1,10 +1,7 @@
 package bot
 
 import (
-	"fmt"
 	"log"
-	"strconv"
-	"strings"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/clients"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/handlers"
@@ -32,116 +29,111 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 
 	updates := bot.GetUpdatesChan(botcfg)
 
-	handlerMap := handlers.NewHandlerMap(bot, db)
-	callbackMap := handlers.NewCallbackMap(bot, db)
-	contextualReplyMap := handlers.NewReplyCallbackMap(bot, db)
+	jouneyMap := handlers.NewHandlerJounreyMap(bot, db)
 
 	commands := handlers.GetHandlerCommandList()
 	_, err = bot.Request(commands)
 
-	contextualReplyHandlerLookup := map[int64]string{}
+	// TODO: This needs to memcached or redis
+	// This way I can add timed cleanup there in the form of expiry time (not sure if i can in memcached)
+	contexHandlerTracker := map[int64]handlers.JourneyTracker{}
 
 	for update := range updates {
+		// TODO: wrap everything in a gorutine? dont forget to use the apropriate map type for gorutines
+		if update.Message == nil && update.CallbackQuery == nil {
+			log.Print("skipping")
+			continue
+		}
+
+		var message *tgbotapi.Message
+
 		if update.Message != nil {
-			if !update.Message.IsCommand() {
-				// TODO: Need to figure out here how to handle messages which came after specific commands
-				// Might need todo smth with chatID
-				// E.G. assuming some form of in memroy db as a map
-				// Use chatID as key and value would be the handler command
-				// Then if message is not a commend
-				//	Lookup the chatID in the map
-				//	if not found
-				//		continue
-				//	getContextualReplyHandler with the message command
-				//	NOTE: Will need to make a cleanup function
+			command := update.Message.Command()
+			chatID := update.Message.Chat.ID
+			log.Printf("[HANDLER]: ChatID: %d COMMAND: %s", chatID, command)
+			message = update.Message
 
-				// NOTE: The above approach works well with just one contextual reply, but I need to figure out how to chain multiple
+		}
 
-				command, ok := contextualReplyHandlerLookup[update.Message.Chat.ID]
+		if update.CallbackQuery != nil {
+			command := update.CallbackQuery.Message.Command()
+			chatID := update.CallbackQuery.Message.Chat.ID
+			log.Printf("[CALLBACK COMMAND]: %d, COMMAND: %s, DATA: %s", chatID,
+				command, update.CallbackQuery.Data)
+			message = update.CallbackQuery.Message
+		}
+
+		if message != nil {
+			command := ""
+			index := 0
+			previous := []tgbotapi.Update{}
+
+			if message.IsCommand() {
+				command = message.Command()
+			} else {
+				c, ok := contexHandlerTracker[message.Chat.ID]
 				if !ok {
 					continue
 				}
+				command = c.Command
+				index = c.Next
+				previous = c.PastUpdates
+			}
 
-				contextualReplyHandler, ok := contextualReplyMap[command]
-				if !ok {
-					continue
-				}
+			chatID := message.Chat.ID
 
-				exeList := strings.Split(command, ":")
-				if exeList[1] != "~" {
-					exeNum, err := strconv.Atoi(exeList[1])
-					if err != nil {
-						log.Printf("[CONTEXTUAL CALLBACK ERROR]: ChatID: %d, %s", update.Message.Chat.ID, err.Error())
-						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Sorry, internal server error")
-						bot.Send(msg)
-						continue
-					}
+			handlerJourney, ok := jouneyMap[command]
+			if !ok {
+				// command not found, for now just ignore it
+				log.Printf("[HANDLER ERROR]: chatID %d, trying to ccess handler journey which is nil", message.Chat.ID)
+				continue
+			}
+			journey, infinite := handlerJourney.GetHandlerJourney()
 
-					// Check for a next one, else if check for an infinitly looping one
-					newCommand := fmt.Sprintf("%s:%d", exeList[0], exeNum+1)
-					_, ok = contextualReplyMap[newCommand]
-					if !ok {
-						newCommand = fmt.Sprintf("%s:~", exeList[0])
-						_, ok := contextualReplyMap[newCommand]
-						if !ok {
-							delete(contextualReplyHandlerLookup, update.Message.Chat.ID)
-							continue
-						}
-					}
+			if journey[index] == nil {
+				log.Printf("[HANDLER ERROR]: chatID %d, trying to ccess handler journey which is nil", message.Chat.ID)
+				continue
+			}
 
-					contextualReplyHandlerLookup[update.Message.Chat.ID] = newCommand
-				}
-
-				err = contextualReplyHandler(update)
-				if err != nil {
-					log.Printf("[CONTEXTUAL CALLBACK ERROR]: ChatID: %d, %s", update.Message.Chat.ID, err.Error())
-					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Sorry, internal server error")
+			err := journey[index](update, previous)
+			if err != nil {
+				if err != handlers.JourneryExitErr {
+					log.Printf("[HANDLER ERROR]: ChatID: %d, %s", message.Chat.ID, err.Error())
+					msg := tgbotapi.NewMessage(message.Chat.ID, "Sorry, internal server error")
 					bot.Send(msg)
-					continue
 				}
 
+				log.Printf("cleaning up %d, %d", chatID, index)
+				delete(contexHandlerTracker, chatID)
+
 				continue
 			}
 
-			log.Printf("[CALLBACK]: ChatID: %d, DATA: %s", update.Message.Chat.ID, update.Message.Text)
-
-			handler, ok := handlerMap[update.Message.Command()]
-			if !ok {
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "No such command")
-				bot.Send(msg)
+			if len(journey)-1 > index {
+				contexHandlerTracker[chatID] = handlers.JourneyTracker{
+					Next:        index + 1,
+					Command:     command,
+					PastUpdates: append(previous, update),
+				}
+				log.Printf("next %d, %d", chatID, index)
 				continue
 			}
 
-			contextualReplyHandlerLookup[update.Message.Chat.ID] = fmt.Sprintf("%s:0", update.Message.Command())
-			err := handler(update)
-			if err != nil {
-				log.Printf("[HANDLER ERROR]: ChatID: %d, %s", update.Message.Chat.ID, err.Error())
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Sorry, internal server error")
-				bot.Send(msg)
+			if infinite {
+				log.Printf("infinite %d, %d", chatID, index)
+				contexHandlerTracker[chatID] = handlers.JourneyTracker{
+					Next:        index,
+					Command:     command,
+					PastUpdates: append(previous, update),
+				}
 				continue
 			}
 
-		} else if update.CallbackQuery != nil {
-			log.Printf("[CALLBACK]: %s, DATA: %s", update.CallbackQuery.ID, update.CallbackQuery.Data)
-
-			if !update.CallbackQuery.Message.IsCommand() {
-				continue
-			}
-
-			callback, ok := callbackMap[update.CallbackQuery.Message.Command()]
-			if !ok {
-				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "404")
-				bot.Send(msg)
-				continue
-			}
-			err := callback(update)
-			if err != nil {
-				log.Printf("[CALLBACK ERROR]: %s", err.Error())
-				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Sorry, internal server error")
-				bot.Send(msg)
-				continue
-			}
+			// if this is the last in the journey, cleanup
+			log.Printf("cleaning up %d, %d", chatID, index)
+			delete(contexHandlerTracker, chatID)
 		}
 	}
+
 	return nil
 }

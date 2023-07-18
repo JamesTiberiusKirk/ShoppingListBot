@@ -3,7 +3,7 @@
 -- name: schema
 CREATE TABLE IF NOT EXISTS chats (
     id SERIAL PRIMARY KEY,
-    chat_id INTEGER UNIQUE NOT NULL
+    telegram_chat_id INTEGER UNIQUE NOT NULL
 );
 CREATE TABLE IF NOT EXISTS shopping_lists (
     id SERIAL PRIMARY KEY,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
 -- Example data
 
 -- name: example_data
-INSERT INTO chats (chat_id) VALUES (123456789);
+INSERT INTO chats (telegram_chat_id) VALUES (123456789);
 INSERT INTO shopping_lists (chat_id, title, store_location, due_date)
 VALUES (1, 'Groceries', 'Supermarket', '2023-07-31');
 INSERT INTO shopping_list_items (shopping_list_id, item_text, purchased)

@@ -1,11 +1,28 @@
 package handlers
 
 import (
+	"errors"
+
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/clients"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type handlerFunc func(update tgbotapi.Update) error
+var (
+	JourneryExitErr = errors.New("exiting journery")
+	UserErr         = errors.New("user error")
+)
+
+type JourneyTracker struct {
+	Command     string
+	Next        int
+	PastUpdates []tgbotapi.Update
+}
+
+type HandlerFunc func(update tgbotapi.Update, previous []tgbotapi.Update) error
+type HandlerInterface interface {
+	// GetHandlerJourney returns handler funcs jouneys and weather or not the final elment in the array is to be called endlesly
+	GetHandlerJourney() ([]HandlerFunc, bool)
+}
 
 func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 	return tgbotapi.NewSetMyCommands(
@@ -14,35 +31,19 @@ func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 			Description: "Welcome and chat registration",
 		},
 		tgbotapi.BotCommand{
-			Command:     "kb",
-			Description: "Get keyboard",
-		},
-		tgbotapi.BotCommand{
 			Command:     "newlist",
 			Description: "Create new shopping list",
 		},
+		// tgbotapi.BotCommand{
+		// 	Command:     "kb",
+		// 	Description: "Get keyboard",
+		// },
 	)
 }
 
-func NewHandlerMap(bot *tgbotapi.BotAPI, db *clients.DB) map[string]handlerFunc {
-	return map[string]handlerFunc{
-		"start":   NewStartHandler(bot, db.AddNewChat, db.CheckIfChatExists).Handle,
-		"newlist": NewNewListHandler(bot).Handle,
-		"kb":      NewKeyboardHandler(bot).Handle,
-	}
-}
-
-func NewCallbackMap(bot *tgbotapi.BotAPI, db *clients.DB) map[string]handlerFunc {
-	return map[string]handlerFunc{
-		"kb": NewKeyboardHandler(bot).Callback,
-	}
-}
-
-func NewReplyCallbackMap(bot *tgbotapi.BotAPI, db *clients.DB) map[string]handlerFunc {
-	newListHandler := NewNewListHandler(bot)
-	return map[string]handlerFunc{
-		"newlist:0": newListHandler.ReplyCallback,
-		"newlist:1": newListHandler.ReplyCallback1,
-		// "newlist:~": newListHandler.ReplyCallback2,
+func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *clients.DB) map[string]HandlerInterface {
+	return map[string]HandlerInterface{
+		"start":   NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
+		"newlist": NewNewListHandler(bot.Send, db.NewShoppingList),
 	}
 }

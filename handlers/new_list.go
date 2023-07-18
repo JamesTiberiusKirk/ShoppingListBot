@@ -1,82 +1,79 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type NewListHandler struct {
-	bot     *tgbotapi.BotAPI
-	AddList func(chatID int64, store string, name string) error
+	sendMsg func(c tgbotapi.Chattable) (tgbotapi.Message, error)
+	addList func(chatID int64, title string, storeLoc string, dueDate *time.Time) error
 }
 
-func NewNewListHandler(bot *tgbotapi.BotAPI) *NewListHandler {
+func NewNewListHandler(
+	msgSener func(c tgbotapi.Chattable) (tgbotapi.Message, error),
+	addList func(chatID int64, title string, storeLoc string, dueDate *time.Time) error,
+) *NewListHandler {
 	return &NewListHandler{
-		bot: bot,
+		sendMsg: msgSener,
+		addList: addList,
 	}
 }
 
-func (h *NewListHandler) Handle(update tgbotapi.Update) error {
-	log.Print("[HANDLER]: New List Handler")
+func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
+	return []HandlerFunc{
+		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
+			log.Print("[HANDLER]: New List Handler")
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please Chose a name for the list")
+			_, err := h.sendMsg(msg)
+			if err != nil {
+				return err
+			}
 
-	msg.Text = "Please Chose a name for the list"
+			return nil
+		},
+		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
+			log.Printf("[CALLBACK]: New list contextual reply callback with name %s", update.Message.Text)
 
-	// Send the message.
-	_, err := h.bot.Send(msg)
-	if err != nil {
-		return err
-	}
+			if update.Message.Text == "" {
+				return JourneryExitErr
+			}
 
-	return nil
-}
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Now, please chose a store")
+			_, err := h.sendMsg(msg)
+			if err != nil {
+				return err
+			}
 
-func (h *NewListHandler) ReplyCallback(update tgbotapi.Update) error {
-	log.Printf("[CALLBACK]: New list contextual reply callback with name %s", update.Message.Text)
+			return nil
+		},
+		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
+			log.Printf("[CALLBACK]: New list contextual reply callback 1 with name %s", update.Message.Text)
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			if update.Message.Text == "" {
+				return JourneryExitErr
+			}
 
-	msg.Text = "Now, please chose a store"
+			chatID := update.Message.Chat.ID
+			name := previous[1].Message.Text
+			store := update.Message.Text
 
-	// Send the message.
-	_, err := h.bot.Send(msg)
-	if err != nil {
-		return err
-	}
+			err := h.addList(chatID, name, store, nil)
+			if err != nil {
+				return fmt.Errorf("error inserting shopping_list: %w", err)
+			}
 
-	return nil
-}
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "List created, thank you")
+			_, err = h.sendMsg(msg)
+			if err != nil {
+				return err
+			}
 
-func (h *NewListHandler) ReplyCallback1(update tgbotapi.Update) error {
-	log.Printf("[CALLBACK]: New list contextual reply callback 1 with name %s", update.Message.Text)
-
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-
-	msg.Text = "Thank you"
-
-	// Send the message.
-	_, err := h.bot.Send(msg)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *NewListHandler) ReplyCallback2(update tgbotapi.Update) error {
-	log.Printf("[CALLBACK]: New list contextual reply callback 2 with name %s", update.Message.Text)
-
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-
-	msg.Text = "Thank you again"
-
-	// Send the message.
-	_, err := h.bot.Send(msg)
-	if err != nil {
-		return err
-	}
-
-	return nil
+			return nil
+		},
+	}, false
 }

@@ -3,6 +3,7 @@ package clients
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	"github.com/jmoiron/sqlx"
@@ -26,21 +27,26 @@ func NewDBClient(dbUrl string) (*DB, error) {
 	schema := goyesql.MustParseFile("./sql/schema.sql")
 	queries := goyesql.MustParseFile("./sql/queries.sql")
 
-	sq, ok := schema["schema"]
-	if !ok {
-		log.Print("query not found")
-	}
-
-	_, err = db.Exec(sq.Query)
-	if err != nil {
-		return nil, err
-	}
-
 	return &DB{
 		db:      db,
 		schema:  schema,
 		queries: queries,
 	}, nil
+}
+
+func (d *DB) ApplySchema() error {
+	sq, ok := d.schema["schema"]
+	if !ok {
+		log.Print("schema not found")
+		return fmt.Errorf("schemanot not found")
+	}
+
+	_, err := d.db.Exec(sq.Query)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *DB) AddNewChat(chatID int64) error {
@@ -74,9 +80,25 @@ func (d *DB) CheckIfChatExists(chatID int64) (bool, error) {
 		return false, fmt.Errorf("multiple chats found")
 	}
 
-	if len(chats) != 0 && chats[0].ChatID != chatID {
+	if len(chats) != 0 && chats[0].TelegramChatID != chatID {
 		return true, nil
 	}
 
 	return false, nil
+}
+
+func (d *DB) NewShoppingList(chatID int64, title string, storeLoc string, dueDate *time.Time) error {
+	log.Printf("[DB] inserting to shopping_lists: %+v, %+v, %+v, %+v", chatID, title, storeLoc, dueDate)
+
+	addListQuery, ok := d.queries["add_list"]
+	if !ok {
+		return fmt.Errorf("query missing add_list")
+	}
+
+	_, err := d.db.Exec(addListQuery.Query, chatID, title, storeLoc, dueDate)
+	if err != nil {
+		return fmt.Errorf("error inserting into shopping list table: %w", err)
+	}
+
+	return nil
 }

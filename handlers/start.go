@@ -7,68 +7,73 @@ import (
 )
 
 type StartHandler struct {
-	bot          *tgbotapi.BotAPI
+	sendMsg      func(c tgbotapi.Chattable) (tgbotapi.Message, error)
 	addChat      func(chatID int64) error
 	checkIfExist func(chatID int64) (bool, error)
 }
 
-func NewStartHandler(bot *tgbotapi.BotAPI, addChat func(chatID int64) error, checkIfExist func(chatID int64) (bool, error)) *StartHandler {
+func NewStartHandler(sendMsg func(c tgbotapi.Chattable) (tgbotapi.Message, error),
+	addChat func(chatID int64) error, checkIfExist func(chatID int64) (bool, error)) *StartHandler {
 	return &StartHandler{
-		bot:          bot,
+		sendMsg:      sendMsg,
 		addChat:      addChat,
 		checkIfExist: checkIfExist,
 	}
 }
 
-func (h *StartHandler) Handle(update tgbotapi.Update) error {
-	log.Print("[HANDLER]: Start handler called")
+func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
+	return []HandlerFunc{
+		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Welcome to the Telegram list manager, we are creating your account, bear with us.")
-	_, err := h.bot.Send(msg)
-	if err != nil {
-		return err
-	}
+			log.Print("[HANDLER]: Start handler called")
 
-	found, err := h.checkIfExist(update.Message.Chat.ID)
-	if err != nil {
-		log.Printf("[HANDLER ERROR]: when checking for existing chats: %s", err.Error())
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "An error occurred")
-		_, err = h.bot.Send(msg)
-		if err != nil {
-			log.Printf("[HANDLER ERROR]: %s", err.Error())
-			return err
-		}
-		return err
-	}
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Welcome to the Telegram list manager, we are creating your account, bear with us.")
+			_, err := h.sendMsg(msg)
+			if err != nil {
+				return err
+			}
 
-	if found {
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Chat already registered")
-		_, err = h.bot.Send(msg)
-		if err != nil {
-			log.Printf("[HANDLER ERROR]: %s", err.Error())
-			return err
-		}
-		return nil
-	}
+			found, err := h.checkIfExist(update.Message.Chat.ID)
+			if err != nil {
+				log.Printf("[HANDLER ERROR]: when checking for existing chats: %s", err.Error())
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "An error occurred")
+				_, err = h.sendMsg(msg)
+				if err != nil {
+					log.Printf("[HANDLER ERROR]: %s", err.Error())
+					return err
+				}
+				return err
+			}
 
-	err = h.addChat(update.Message.Chat.ID)
-	if err != nil {
-		log.Printf("[HANDLER ERROR]: %s", err.Error())
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "An error occurred")
-		_, err = h.bot.Send(msg)
-		if err != nil {
-			log.Printf("[HANDLER ERROR]: %s", err.Error())
-			return err
-		}
-		return err
-	}
+			if found {
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Chat already registered")
+				_, err = h.sendMsg(msg)
+				if err != nil {
+					log.Printf("[HANDLER ERROR]: %s", err.Error())
+					return err
+				}
+				return nil
+			}
 
-	msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Chat registered")
-	_, err = h.bot.Send(msg)
-	if err != nil {
-		log.Printf("[HANDLER ERROR]: %s", err.Error())
-		return err
-	}
+			err = h.addChat(update.Message.Chat.ID)
+			if err != nil {
+				log.Printf("[HANDLER ERROR]: %s", err.Error())
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "An error occurred")
+				_, err = h.sendMsg(msg)
+				if err != nil {
+					log.Printf("[HANDLER ERROR]: %s", err.Error())
+					return err
+				}
+				return err
+			}
 
-	return nil
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Chat registered")
+			_, err = h.sendMsg(msg)
+			if err != nil {
+				log.Printf("[HANDLER ERROR]: %s", err.Error())
+				return err
+			}
+			return nil
+		},
+	}, false
 }
