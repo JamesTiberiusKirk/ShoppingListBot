@@ -25,37 +25,37 @@ func NewNewListHandler(
 
 func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
 			log.Print("[HANDLER]: New List Handler")
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please Chose a name for the list")
 			_, err := h.sendMsg(msg)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			return nil, nil
+			return nil
 		},
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
 			log.Printf("[CALLBACK]: New list contextual reply callback with name %s", update.Message.Text)
 
 			if update.Message.Text == "" {
-				return nil, JourneryExitErr
+				return JourneryExitErr
 			}
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Now, please chose a store")
 			_, err := h.sendMsg(msg)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			return nil, nil
+			return nil
 		},
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
 			log.Printf("[CALLBACK]: New list contextual reply callback 1 with name %s", update.Message.Text)
 
 			if update.Message.Text == "" {
-				return nil, JourneryExitErr
+				return JourneryExitErr
 			}
 
 			chatID := update.Message.Chat.ID
@@ -64,16 +64,16 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			err := h.addList(chatID, name, store, nil)
 			if err != nil {
-				return nil, fmt.Errorf("error inserting shopping_list: %w", err)
+				return fmt.Errorf("error inserting shopping_list: %w", err)
 			}
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "List created, thank you")
 			_, err = h.sendMsg(msg)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			return nil, nil
+			return nil
 		},
 	}, false
 }

@@ -18,6 +18,8 @@ type JourneyTracker struct {
 	PastUpdates []tgbotapi.Update
 }
 
+// TODO: finish cleaning up the interfave by remiing previous
+// can just keep previous in the handler's struct if needed
 type HandlerFunc func(update tgbotapi.Update, previous []tgbotapi.Update) error
 type HandlerInterface interface {
 	// GetHandlerJourney returns handler funcs jouneys and weather or not the final elment in the array is to be called endlesly

@@ -23,14 +23,14 @@ func NewStartHandler(sendMsg func(c tgbotapi.Chattable) (tgbotapi.Message, error
 
 func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
 
 			log.Print("[HANDLER]: Start handler called")
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Welcome to the Telegram list manager, we are creating your account, bear with us.")
 			_, err := h.sendMsg(msg)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			found, err := h.checkIfExist(update.Message.Chat.ID)
@@ -40,9 +40,9 @@ func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				_, err = h.sendMsg(msg)
 				if err != nil {
 					log.Printf("[HANDLER ERROR]: %s", err.Error())
-					return nil, err
+					return err
 				}
-				return nil, err
+				return err
 			}
 
 			if found {
@@ -50,9 +50,9 @@ func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				_, err = h.sendMsg(msg)
 				if err != nil {
 					log.Printf("[HANDLER ERROR]: %s", err.Error())
-					return nil, err
+					return err
 				}
-				return nil, nil
+				return nil
 			}
 
 			err = h.addChat(update.Message.Chat.ID)
@@ -62,18 +62,18 @@ func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				_, err = h.sendMsg(msg)
 				if err != nil {
 					log.Printf("[HANDLER ERROR]: %s", err.Error())
-					return nil, err
+					return err
 				}
-				return nil, err
+				return err
 			}
 
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Chat registered")
 			_, err = h.sendMsg(msg)
 			if err != nil {
 				log.Printf("[HANDLER ERROR]: %s", err.Error())
-				return nil, err
+				return err
 			}
-			return nil, nil
+			return nil
 		},
 	}, false
 }
