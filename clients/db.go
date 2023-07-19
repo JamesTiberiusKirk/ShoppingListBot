@@ -8,7 +8,6 @@ import (
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/goyesql"
-
 	_ "github.com/lib/pq"
 )
 
@@ -97,8 +96,84 @@ func (d *DB) NewShoppingList(chatID int64, title string, storeLoc string, dueDat
 
 	_, err := d.db.Exec(addListQuery.Query, chatID, title, storeLoc, dueDate)
 	if err != nil {
-		return fmt.Errorf("error inserting into shopping list table: %w", err)
+		return fmt.Errorf("error inserting into shopping_lists table: %w", err)
 	}
 
 	return nil
+}
+
+func (d *DB) GetListsByID(id int64) (types.ShoppingList, error) {
+	log.Printf("[DB] quering shopping_lists table by id: %+v", id)
+
+	addListQuery, ok := d.queries["get_list_by_id"]
+	if !ok {
+		return types.ShoppingList{}, fmt.Errorf("query missing get_list_by_id")
+	}
+
+	var shoppingLists types.ShoppingList
+	err := d.db.Select(&shoppingLists, addListQuery.Query, id)
+	if err != nil {
+		return types.ShoppingList{}, fmt.Errorf("error quering shopping_lists table: %w", err)
+	}
+
+	return shoppingLists, nil
+}
+
+func (d *DB) GetListsByChat(chatID int64) ([]types.ShoppingList, error) {
+	log.Printf("[DB] quering shopping_lists table for chat: %+v", chatID)
+
+	addListQuery, ok := d.queries["get_lists"]
+	if !ok {
+		return nil, fmt.Errorf("query missing get_lists")
+	}
+
+	var shoppingLists []types.ShoppingList
+	err := d.db.Select(&shoppingLists, addListQuery.Query, chatID)
+	if err != nil {
+		return nil, fmt.Errorf("error quering shopping_lists table: %w", err)
+	}
+
+	return shoppingLists, nil
+}
+
+func (d *DB) AddItemsToList(listID string, itemsText []string) error {
+	log.Printf("[DB] inserting to shopping_list_items: %+v, %+v", listID, itemsText)
+
+	addListQuery, ok := d.queries["add_items"]
+	if !ok {
+		return fmt.Errorf("query missing add_items")
+	}
+
+	batchInsert := []map[string]interface{}{}
+
+	for _, t := range itemsText {
+		batchInsert = append(batchInsert, map[string]interface{}{
+			"list_id": listID,
+			"text":    t,
+		})
+	}
+
+	_, err := d.db.NamedExec(addListQuery.Query, batchInsert)
+	if err != nil {
+		return fmt.Errorf("error inserting into shopping_list_items table: %w", err)
+	}
+
+	return nil
+}
+
+func (d *DB) GetItemsByList(chatID int64) ([]types.ShoppingList, error) {
+	log.Printf("[DB] quering shopping_lists table for chat: %+v", chatID)
+
+	addListQuery, ok := d.queries["get_lists"]
+	if !ok {
+		return nil, fmt.Errorf("query missing get_lists")
+	}
+
+	var shoppingLists []types.ShoppingList
+	err := d.db.Select(&shoppingLists, addListQuery.Query, chatID)
+	if err != nil {
+		return nil, fmt.Errorf("error quering shopping_lists table: %w", err)
+	}
+
+	return shoppingLists, nil
 }

@@ -105,7 +105,6 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 
 				log.Printf("cleaning up %d, %d", chatID, index)
 				delete(contexHandlerTracker, chatID)
-
 				continue
 			}
 

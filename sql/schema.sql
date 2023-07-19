@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS shopping_lists (
     title VARCHAR(255) NOT NULL,
     store_location VARCHAR(255),
     due_date DATE,
-    FOREIGN KEY (id) REFERENCES chats (id) ON DELETE CASCADE
+    FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS shopping_list_items (
     id SERIAL PRIMARY KEY,

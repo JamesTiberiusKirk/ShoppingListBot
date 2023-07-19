@@ -34,16 +34,17 @@ func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 			Command:     "newlist",
 			Description: "Create new shopping list",
 		},
-		// tgbotapi.BotCommand{
-		// 	Command:     "kb",
-		// 	Description: "Get keyboard",
-		// },
+		tgbotapi.BotCommand{
+			Command:     "additems",
+			Description: "Add items to a shopping list",
+		},
 	)
 }
 
 func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *clients.DB) map[string]HandlerInterface {
 	return map[string]HandlerInterface{
-		"start":   NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
-		"newlist": NewNewListHandler(bot.Send, db.NewShoppingList),
+		"start":    NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
+		"newlist":  NewNewListHandler(bot.Send, db.NewShoppingList),
+		"additems": NewAddItemsHandler(bot.Send, db.GetListsByChat, db.AddItemsToList),
 	}
 }
