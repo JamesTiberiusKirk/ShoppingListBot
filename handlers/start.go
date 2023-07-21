@@ -13,7 +13,8 @@ type StartHandler struct {
 }
 
 func NewStartHandler(sendMsg func(c tgbotapi.Chattable) (tgbotapi.Message, error),
-	addChat func(chatID int64) error, checkIfExist func(chatID int64) (bool, error)) *StartHandler {
+	addChat func(chatID int64) error,
+	checkIfExist func(chatID int64) (bool, error)) *StartHandler {
 	return &StartHandler{
 		sendMsg:      sendMsg,
 		addChat:      addChat,
@@ -23,14 +24,14 @@ func NewStartHandler(sendMsg func(c tgbotapi.Chattable) (tgbotapi.Message, error
 
 func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
+		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
 
 			log.Print("[HANDLER]: Start handler called")
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Welcome to the Telegram list manager, we are creating your account, bear with us.")
 			_, err := h.sendMsg(msg)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			found, err := h.checkIfExist(update.Message.Chat.ID)
@@ -40,9 +41,9 @@ func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				_, err = h.sendMsg(msg)
 				if err != nil {
 					log.Printf("[HANDLER ERROR]: %s", err.Error())
-					return err
+					return nil, err
 				}
-				return err
+				return nil, err
 			}
 
 			if found {
@@ -50,9 +51,9 @@ func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				_, err = h.sendMsg(msg)
 				if err != nil {
 					log.Printf("[HANDLER ERROR]: %s", err.Error())
-					return err
+					return nil, err
 				}
-				return nil
+				return nil, nil
 			}
 
 			err = h.addChat(update.Message.Chat.ID)
@@ -62,18 +63,18 @@ func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				_, err = h.sendMsg(msg)
 				if err != nil {
 					log.Printf("[HANDLER ERROR]: %s", err.Error())
-					return err
+					return nil, err
 				}
-				return err
+				return nil, err
 			}
 
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Chat registered")
 			_, err = h.sendMsg(msg)
 			if err != nil {
 				log.Printf("[HANDLER ERROR]: %s", err.Error())
-				return err
+				return nil, err
 			}
-			return nil
+			return nil, nil
 		},
 	}, false
 }

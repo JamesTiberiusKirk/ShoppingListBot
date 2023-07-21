@@ -10,12 +10,9 @@ import (
 )
 
 type AddItemsHandler struct {
-	ShoppingListsMap map[string]types.ShoppingList
-	ShoppingList     types.ShoppingList
-	Items            []string
-	sendMsg          func(c tgbotapi.Chattable) (tgbotapi.Message, error)
-	getLists         func(chatID int64) ([]types.ShoppingList, error)
-	addItems         func(listID string, itemText []string) error
+	sendMsg  func(c tgbotapi.Chattable) (tgbotapi.Message, error)
+	getLists func(chatID int64) ([]types.ShoppingList, error)
+	addItems func(listID string, itemText []string) error
 }
 
 func NewAddItemsHandler(
@@ -36,18 +33,21 @@ type AddItemsHandlerContext struct {
 	Items            []string
 }
 
+// TODO:NEED to handler if there are no lists
 func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
+		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler")
 
 			lists, err := h.getLists(update.Message.Chat.ID)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
+			c := AddItemsHandlerContext{}
+
 			kbRows := [][]tgbotapi.InlineKeyboardButton{}
-			h.ShoppingListsMap = map[string]types.ShoppingList{}
+			c.ShoppingListsMap = map[string]types.ShoppingList{}
 			for _, l := range lists {
 				kbRows = append(
 					kbRows,
@@ -55,38 +55,43 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 						tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
 					),
 				)
-				h.ShoppingListsMap[l.ID] = l
+				c.ShoppingListsMap[l.ID] = l
 			}
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please chose the list to add items to")
 			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
 			_, err = h.sendMsg(msg)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			return nil
+			return c, nil
 		},
-		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
+		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler 2")
 			chatID := update.CallbackQuery.Message.Chat.ID
 			listID := update.CallbackQuery.Data
 
+			c, ok := context.(AddItemsHandlerContext)
+			if !ok {
+				return nil, CouldNotExteactContextErr
+			}
+
+			c.ShoppingList = c.ShoppingListsMap[listID]
+
 			msg := tgbotapi.NewMessage(
 				chatID,
-				fmt.Sprintf("Adding to %s, start typing the items and type \"DONE\" when finished", listID),
+				fmt.Sprintf("Adding to %s, start typing the items and type \"DONE\" when finished", c.ShoppingList.Title),
 			)
 
 			_, err := h.sendMsg(msg)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			h.ShoppingList = h.ShoppingListsMap[listID]
-
-			return nil
+			return c, nil
 		},
-		func(update tgbotapi.Update, previous []tgbotapi.Update) error {
+		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler 2")
 
 			var message tgbotapi.Message
@@ -95,22 +100,27 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			} else if update.Message != nil {
 				message = *update.Message
 			} else {
-				return JourneryExitErr
+				return nil, JourneryExitErr
+			}
+
+			c, ok := context.(AddItemsHandlerContext)
+			if !ok {
+				return nil, CouldNotExteactContextErr
 			}
 
 			if strings.ToUpper(message.Text) == "DONE" {
-				log.Printf("[HANDLER]: ITEMS: %+v", h.Items)
-				err := h.addItems(h.ShoppingList.ID, h.Items)
+				log.Printf("[HANDLER]: ITEMS: %+v", c.Items)
+				err := h.addItems(c.ShoppingList.ID, c.Items)
 				if err != nil {
-					return fmt.Errorf("error inserting items into list %s, %w", h.ShoppingList.ID, err)
+					return nil, fmt.Errorf("error inserting items into list %s, %w", c.ShoppingList.ID, err)
 				}
 
-				return JourneryExitErr
+				return nil, JourneryExitErr
 			}
 
-			h.Items = append(h.Items, message.Text)
+			c.Items = append(c.Items, message.Text)
 
-			return nil
+			return c, nil
 		},
 	}, true
 }

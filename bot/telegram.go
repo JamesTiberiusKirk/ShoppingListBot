@@ -50,23 +50,26 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 		if update.Message != nil {
 			command := update.Message.Command()
 			chatID := update.Message.Chat.ID
-			log.Printf("[HANDLER]: ChatID: %d COMMAND: %s", chatID, command)
 			message = update.Message
 
+			log.Printf("[HANDLER]: ChatID: %d COMMAND: %s TEXT: %s", chatID, command, message.Text)
 		}
 
 		if update.CallbackQuery != nil {
 			command := update.CallbackQuery.Message.Command()
 			chatID := update.CallbackQuery.Message.Chat.ID
-			log.Printf("[CALLBACK COMMAND]: %d, COMMAND: %s, DATA: %s", chatID,
-				command, update.CallbackQuery.Data)
 			message = update.CallbackQuery.Message
+
+			log.Printf("[CALLBACK QUERY HANDLER]: ChatID: %d COMMAND: %s TEXT: %s", chatID, command, message.Text)
 		}
 
 		if message != nil {
+			// TODO: cleanup this mess
+			// TODO: NEED TO figure out a way to manage groups in here
 			command := ""
 			index := 0
 			previous := []tgbotapi.Update{}
+			var previousContext interface{}
 
 			if message.IsCommand() {
 				command = message.Command()
@@ -78,6 +81,7 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 				command = c.Command
 				index = c.Next
 				previous = c.PastUpdates
+				previousContext = c.Context
 			}
 
 			chatID := message.Chat.ID
@@ -95,7 +99,7 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 				continue
 			}
 
-			err := journey[index](update, previous)
+			nextContext, err := journey[index](previousContext, update, previous)
 			if err != nil {
 				if err != handlers.JourneryExitErr {
 					log.Printf("[HANDLER ERROR]: ChatID: %d, %s", message.Chat.ID, err.Error())
@@ -113,6 +117,7 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 					Next:        index + 1,
 					Command:     command,
 					PastUpdates: append(previous, update),
+					Context:     nextContext,
 				}
 				log.Printf("next %d, %d", chatID, index)
 				continue
@@ -124,6 +129,7 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 					Next:        index,
 					Command:     command,
 					PastUpdates: append(previous, update),
+					Context:     nextContext,
 				}
 				continue
 			}

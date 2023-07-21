@@ -32,3 +32,8 @@ VALUES (:list_id, :text, FALSE)
 
 -- name: get_items_in_list
 SELECT * FROM shopping_list_items WHERE shopping_list_id = $1
+
+-- name: toggle_item_purchase
+UPDATE shopping_list_items
+SET purchased = NOT purchased
+WHERE id = $1

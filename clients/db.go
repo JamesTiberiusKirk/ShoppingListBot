@@ -139,7 +139,7 @@ func (d *DB) GetListsByChat(chatID int64) ([]types.ShoppingList, error) {
 func (d *DB) AddItemsToList(listID string, itemsText []string) error {
 	log.Printf("[DB] inserting to shopping_list_items: %+v, %+v", listID, itemsText)
 
-	addListQuery, ok := d.queries["add_items"]
+	query, ok := d.queries["add_items"]
 	if !ok {
 		return fmt.Errorf("query missing add_items")
 	}
@@ -153,7 +153,7 @@ func (d *DB) AddItemsToList(listID string, itemsText []string) error {
 		})
 	}
 
-	_, err := d.db.NamedExec(addListQuery.Query, batchInsert)
+	_, err := d.db.NamedExec(query.Query, batchInsert)
 	if err != nil {
 		return fmt.Errorf("error inserting into shopping_list_items table: %w", err)
 	}
@@ -161,19 +161,35 @@ func (d *DB) AddItemsToList(listID string, itemsText []string) error {
 	return nil
 }
 
-func (d *DB) GetItemsByList(chatID int64) ([]types.ShoppingList, error) {
-	log.Printf("[DB] quering shopping_lists table for chat: %+v", chatID)
+func (d *DB) GetItemsByList(listID string) ([]types.ShoppingListItem, error) {
+	log.Printf("[DB] quering shopping_list_items table for chat: %+v", listID)
 
-	addListQuery, ok := d.queries["get_lists"]
+	query, ok := d.queries["get_items_in_list"]
 	if !ok {
-		return nil, fmt.Errorf("query missing get_lists")
+		return nil, fmt.Errorf("query missing get_items_in_list")
 	}
 
-	var shoppingLists []types.ShoppingList
-	err := d.db.Select(&shoppingLists, addListQuery.Query, chatID)
+	var shoppingListItems []types.ShoppingListItem
+	err := d.db.Select(&shoppingListItems, query.Query, listID)
 	if err != nil {
-		return nil, fmt.Errorf("error quering shopping_lists table: %w", err)
+		return nil, fmt.Errorf("error quering shopping_list_items table: %w", err)
 	}
 
-	return shoppingLists, nil
+	return shoppingListItems, nil
+}
+
+func (d *DB) ToggleItemPurchase(itemID string) error {
+	log.Printf("[DB] toggling item purchase: %+v", itemID)
+
+	query, ok := d.queries["toggle_item_purchase"]
+	if !ok {
+		return fmt.Errorf("query missing toggle_item_purchase")
+	}
+
+	_, err := d.db.Exec(query.Query, itemID)
+	if err != nil {
+		return fmt.Errorf("error updating toggle_item_purchase table: %w", err)
+	}
+
+	return nil
 }

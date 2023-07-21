@@ -3,7 +3,7 @@
 -- name: schema
 CREATE TABLE IF NOT EXISTS chats (
     id SERIAL PRIMARY KEY,
-    telegram_chat_id INTEGER UNIQUE NOT NULL
+    telegram_chat_id BIGINT UNIQUE NOT NULL
 );
 CREATE TABLE IF NOT EXISTS shopping_lists (
     id SERIAL PRIMARY KEY,
