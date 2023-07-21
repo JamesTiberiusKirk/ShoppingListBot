@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -192,4 +193,28 @@ func (d *DB) ToggleItemPurchase(itemID string) error {
 	}
 
 	return nil
+}
+
+func (d *DB) CheckRegistration(chatID int64) (bool, error) {
+	log.Printf("[DB] quering chats table for chat: %+v", chatID)
+
+	query, ok := d.queries["get_chat"]
+	if !ok {
+		return false, fmt.Errorf("query missing get_chat")
+	}
+
+	var chat types.Chat
+	err := d.db.QueryRow(query.Query, chatID).Scan(&chat)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, fmt.Errorf("error quering chats table: %w", err)
+	}
+
+	if chatID != chat.TelegramChatID {
+		return false, nil
+	}
+
+	return true, nil
 }

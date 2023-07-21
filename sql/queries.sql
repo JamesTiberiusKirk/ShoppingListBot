@@ -37,3 +37,5 @@ SELECT * FROM shopping_list_items WHERE shopping_list_id = $1
 UPDATE shopping_list_items
 SET purchased = NOT purchased
 WHERE id = $1
+
+

@@ -51,9 +51,10 @@ func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 
 func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *clients.DB) map[string]HandlerInterface {
 	return map[string]HandlerInterface{
-		"start":       NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
-		"newlist":     NewNewListHandler(bot.Send, db.NewShoppingList),
-		"additems":    NewAddItemsHandler(bot.Send, db.GetListsByChat, db.AddItemsToList),
-		"displaylist": NewDisplayListHandler(bot.Send, bot.Request, db.GetListsByChat, db.GetItemsByList, db.ToggleItemPurchase),
+		"start":    NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
+		"newlist":  NewNewListHandler(bot.Send, db.NewShoppingList),
+		"additems": NewAddItemsHandler(bot.Send, db.GetListsByChat, db.AddItemsToList),
+		"displaylist": NewDisplayListHandler(bot.Send, bot.Request, db.GetListsByChat,
+			db.GetItemsByList, db.ToggleItemPurchase, db.CheckRegistration),
 	}
 }

@@ -101,7 +101,7 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 
 			nextContext, err := journey[index](previousContext, update, previous)
 			if err != nil {
-				if err != handlers.JourneryExitErr {
+				if err != handlers.JourneryExitErr && err != handlers.UserErr {
 					log.Printf("[HANDLER ERROR]: ChatID: %d, %s", message.Chat.ID, err.Error())
 					msg := tgbotapi.NewMessage(message.Chat.ID, "Sorry, internal server error")
 					bot.Send(msg)

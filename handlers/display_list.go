@@ -14,6 +14,7 @@ type DisplayListHandler struct {
 	getLists           func(chatID int64) ([]types.ShoppingList, error)
 	getItems           func(listID string) ([]types.ShoppingListItem, error)
 	toggleItemPurchase func(itemID string) error
+	checkRegistration  func(chatID int64) (bool, error)
 }
 
 func NewDisplayListHandler(
@@ -22,6 +23,7 @@ func NewDisplayListHandler(
 	getLists func(chatID int64) ([]types.ShoppingList, error),
 	getItems func(listID string) ([]types.ShoppingListItem, error),
 	toggleItemPurchase func(itemID string) error,
+	checkRegistration func(chatID int64) (bool, error),
 ) *DisplayListHandler {
 	return &DisplayListHandler{
 		sendMsg:            msgSener,
@@ -29,6 +31,7 @@ func NewDisplayListHandler(
 		getLists:           getLists,
 		getItems:           getItems,
 		toggleItemPurchase: toggleItemPurchase,
+		checkRegistration:  checkRegistration,
 	}
 }
 
@@ -40,40 +43,41 @@ type DisplayListHandlerContext struct {
 
 func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
-			log.Print("[HANDLER]: Display List Handler")
+		chatRegistered(h.sendMsg, h.checkRegistration,
+			func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+				log.Print("[HANDLER]: Display List Handler")
 
-			lists, err := h.getLists(update.Message.Chat.ID)
-			if err != nil {
-				return nil, err
-			}
+				lists, err := h.getLists(update.Message.Chat.ID)
+				if err != nil {
+					return nil, err
+				}
 
-			c := DisplayListHandlerContext{
-				ShoppingListsMap: map[string]types.ShoppingList{},
-				Items:            []types.ShoppingListItem{},
-			}
+				c := DisplayListHandlerContext{
+					ShoppingListsMap: map[string]types.ShoppingList{},
+					Items:            []types.ShoppingListItem{},
+				}
 
-			kbRows := [][]tgbotapi.InlineKeyboardButton{}
-			c.ShoppingListsMap = map[string]types.ShoppingList{}
-			for _, l := range lists {
-				kbRows = append(
-					kbRows,
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
-					),
-				)
-				c.ShoppingListsMap[l.ID] = l
-			}
+				kbRows := [][]tgbotapi.InlineKeyboardButton{}
+				c.ShoppingListsMap = map[string]types.ShoppingList{}
+				for _, l := range lists {
+					kbRows = append(
+						kbRows,
+						tgbotapi.NewInlineKeyboardRow(
+							tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
+						),
+					)
+					c.ShoppingListsMap[l.ID] = l
+				}
 
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please chose the list to display")
-			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
-			_, err = h.sendMsg(msg)
-			if err != nil {
-				return nil, err
-			}
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please chose the list to display")
+				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
+				_, err = h.sendMsg(msg)
+				if err != nil {
+					return nil, err
+				}
 
-			return c, nil
-		},
+				return c, nil
+			}),
 		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Display List Handler 2")
 			c, ok := context.(DisplayListHandlerContext)
@@ -93,24 +97,8 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				c.Items = append(c.Items, i)
 			}
 
-			kbRows := [][]tgbotapi.InlineKeyboardButton{}
-			for _, item := range c.Items {
-				text := ""
-				if item.Purchased {
-					text += "✅ "
-				}
-				text += item.ItemText
-
-				kbRows = append(
-					kbRows,
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(text, item.ID),
-					),
-				)
-			}
-
 			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Please chose the list to display")
-			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
+			msg.ReplyMarkup = h.buildKeyboard(c)
 			_, err = h.sendMsg(msg)
 			if err != nil {
 				return nil, err
@@ -147,26 +135,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, fmt.Errorf("error toggling item purchace in db id: %s, err: %w", c.Items[itemIndex].ID, err)
 			}
 
-			kbRows := [][]tgbotapi.InlineKeyboardButton{}
-			for _, i := range c.Items {
-				text := ""
-				if i.Purchased {
-					log.Print("PURCHASED")
-					text += "✅ "
-				}
-				text += i.ItemText
-				log.Print(text)
-
-				kbRows = append(
-					kbRows,
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(text, i.ID),
-					),
-				)
-				// TODO: need to make another bottom KB row in order to allow the user to exit or modify the list
-			}
-
-			markup := tgbotapi.NewInlineKeyboardMarkup(kbRows...)
+			markup := h.buildKeyboard(c)
 			msg := tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, markup)
 			_, err = h.botReq(msg)
 			if err != nil {
@@ -176,4 +145,26 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			return c, nil
 		},
 	}, true
+}
+
+func (h *DisplayListHandler) buildKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMarkup {
+	kbRows := [][]tgbotapi.InlineKeyboardButton{}
+	for _, i := range c.Items {
+		text := ""
+		if i.Purchased {
+			log.Print("PURCHASED")
+			text += "✅ "
+		}
+		text += i.ItemText
+		log.Print(text)
+
+		kbRows = append(
+			kbRows,
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(text, i.ID),
+			),
+		)
+		// TODO: need to make another bottom KB row in order to allow the user to exit or modify the list
+	}
+	return tgbotapi.NewInlineKeyboardMarkup(kbRows...)
 }
