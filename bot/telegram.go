@@ -3,12 +3,12 @@ package bot
 import (
 	"log"
 
-	"github.com/JamesTiberiusKirk/ShoppingListsBot/clients"
+	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/handlers"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func StartBot(token string, debug bool, db *clients.DB) error {
+func StartBot(token string, debug bool, db *db.DB) error {
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return err

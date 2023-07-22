@@ -3,7 +3,7 @@ package handlers
 import (
 	"errors"
 
-	"github.com/JamesTiberiusKirk/ShoppingListsBot/clients"
+	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -48,7 +48,7 @@ func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 	)
 }
 
-func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *clients.DB) map[string]HandlerInterface {
+func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *db.DB) map[string]HandlerInterface {
 	return map[string]HandlerInterface{
 		"start":    NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
 		"newlist":  NewNewListHandler(bot.Send, db.NewShoppingList, db.CheckIfChatExists),

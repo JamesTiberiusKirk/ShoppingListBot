@@ -2,14 +2,14 @@ package main
 
 import (
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/bot"
-	"github.com/JamesTiberiusKirk/ShoppingListsBot/clients"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/config"
+	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
 )
 
 func main() {
 	c := config.GetConfig()
 
-	db, err := clients.NewDBClient(c.DbUrl)
+	db, err := db.NewDBClient(c.DbUrl)
 	if err != nil {
 		panic(err)
 	}
