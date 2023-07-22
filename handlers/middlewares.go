@@ -12,7 +12,7 @@ func chatRegistered(
 	checkRegistration func(chatID int64) (bool, error),
 	h HandlerFunc,
 ) HandlerFunc {
-	return func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+	return func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 		log.Print("[MIDDLEWARE]: Display List Handler")
 
 		chatID, err := getChatID(update)
@@ -34,6 +34,6 @@ func chatRegistered(
 			return nil, UserErr
 		}
 
-		return h(context, update, previous)
+		return h(context, update)
 	}
 }

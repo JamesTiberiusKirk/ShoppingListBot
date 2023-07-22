@@ -24,7 +24,7 @@ func NewStartHandler(sendMsg func(c tgbotapi.Chattable) (tgbotapi.Message, error
 
 func (h *StartHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 
 			log.Print("[HANDLER]: Start handler called")
 

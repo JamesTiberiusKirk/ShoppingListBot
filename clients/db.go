@@ -64,27 +64,27 @@ func (d *DB) AddNewChat(chatID int64) error {
 }
 
 func (d *DB) CheckIfChatExists(chatID int64) (bool, error) {
-	selectChat, ok := d.queries["get_chat"]
+	log.Printf("[DB] quering chats table for chat: %+v", chatID)
+
+	query, ok := d.queries["get_chat"]
 	if !ok {
 		return false, fmt.Errorf("query missing get_chat")
 	}
 
-	chats := []types.Chat{}
-	err := d.db.Select(&chats, selectChat.Query, chatID)
+	var chat types.Chat
+	err := d.db.QueryRowx(query.Query, chatID).StructScan(&chat)
 	if err != nil {
-		return false, fmt.Errorf("error inserting into chats %d, err: %w", chatID, err)
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, fmt.Errorf("error quering chats table: %w", err)
 	}
 
-	if len(chats) >= 1 {
-		log.Printf("%+v", chats)
-		return false, fmt.Errorf("multiple chats found")
+	if chatID != chat.TelegramChatID {
+		return false, nil
 	}
 
-	if len(chats) != 0 && chats[0].TelegramChatID != chatID {
-		return true, nil
-	}
-
-	return false, nil
+	return true, nil
 }
 
 func (d *DB) NewShoppingList(chatID int64, title string, storeLoc string, dueDate *time.Time) error {
@@ -193,28 +193,4 @@ func (d *DB) ToggleItemPurchase(itemID string) error {
 	}
 
 	return nil
-}
-
-func (d *DB) CheckRegistration(chatID int64) (bool, error) {
-	log.Printf("[DB] quering chats table for chat: %+v", chatID)
-
-	query, ok := d.queries["get_chat"]
-	if !ok {
-		return false, fmt.Errorf("query missing get_chat")
-	}
-
-	var chat types.Chat
-	err := d.db.QueryRow(query.Query, chatID).Scan(&chat)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		return false, fmt.Errorf("error quering chats table: %w", err)
-	}
-
-	if chatID != chat.TelegramChatID {
-		return false, nil
-	}
-
-	return true, nil
 }

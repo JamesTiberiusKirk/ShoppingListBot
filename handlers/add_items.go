@@ -33,15 +33,24 @@ type AddItemsHandlerContext struct {
 	Items            []string
 }
 
-// TODO:NEED to handler if there are no lists
 func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler")
 
+			chatID, _ := getChatID(update)
 			lists, err := h.getLists(update.Message.Chat.ID)
 			if err != nil {
 				return nil, err
+			}
+
+			if len(lists) < 1 {
+				msg := tgbotapi.NewMessage(chatID, "There are no lists")
+				_, err = h.sendMsg(msg)
+				if err != nil {
+					return nil, err
+				}
+				return nil, JourneryExitErr
 			}
 
 			c := AddItemsHandlerContext{}
@@ -67,7 +76,7 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			return c, nil
 		},
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler 2")
 			chatID := update.CallbackQuery.Message.Chat.ID
 			listID := update.CallbackQuery.Data
@@ -91,7 +100,7 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			return c, nil
 		},
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler 2")
 
 			var message tgbotapi.Message

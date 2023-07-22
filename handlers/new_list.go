@@ -9,60 +9,85 @@ import (
 )
 
 type NewListHandler struct {
-	sendMsg func(c tgbotapi.Chattable) (tgbotapi.Message, error)
-	addList func(chatID int64, title string, storeLoc string, dueDate *time.Time) error
+	sendMsg           func(c tgbotapi.Chattable) (tgbotapi.Message, error)
+	addList           func(chatID int64, title string, storeLoc string, dueDate *time.Time) error
+	checkRegistration func(chatID int64) (bool, error)
 }
 
 func NewNewListHandler(
 	msgSener func(c tgbotapi.Chattable) (tgbotapi.Message, error),
 	addList func(chatID int64, title string, storeLoc string, dueDate *time.Time) error,
+	checkRegistration func(chatID int64) (bool, error),
 ) *NewListHandler {
 	return &NewListHandler{
-		sendMsg: msgSener,
-		addList: addList,
+		sendMsg:           msgSener,
+		addList:           addList,
+		checkRegistration: checkRegistration,
 	}
 }
 
+type NewListHandlerContext struct {
+	Title   string
+	Store   string
+	DueDate *time.Time
+}
+
+// TODO: Refactor this to not use previous then remove previousfrom the entire application
 func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
-			log.Print("[HANDLER]: New List Handler")
+		chatRegistered(h.sendMsg, h.checkRegistration,
+			func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+				log.Print("[HANDLER]: New List Handler")
 
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please Chose a name for the list")
-			_, err := h.sendMsg(msg)
-			if err != nil {
-				return nil, err
-			}
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please Chose a name for the list")
+				_, err := h.sendMsg(msg)
+				if err != nil {
+					return nil, err
+				}
 
-			return nil, nil
-		},
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+				c := NewListHandlerContext{}
+
+				return c, nil
+			},
+		),
+		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 			log.Printf("[CALLBACK]: New list contextual reply callback with name %s", update.Message.Text)
+
+			chatID, _ := getChatID(update)
 
 			if update.Message.Text == "" {
 				return nil, JourneryExitErr
 			}
 
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Now, please chose a store")
+			c, ok := context.(NewListHandlerContext)
+			if !ok {
+				return nil, CouldNotExteactContextErr
+			}
+
+			c.Title = update.Message.Text
+			msg := tgbotapi.NewMessage(chatID, "Now, please chose a store")
 			_, err := h.sendMsg(msg)
 			if err != nil {
 				return nil, err
 			}
 
-			return nil, nil
+			return c, nil
 		},
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 			log.Printf("[CALLBACK]: New list contextual reply callback 1 with name %s", update.Message.Text)
 
 			if update.Message.Text == "" {
 				return nil, JourneryExitErr
 			}
 
-			chatID := update.Message.Chat.ID
-			name := previous[1].Message.Text
-			store := update.Message.Text
+			c, ok := context.(NewListHandlerContext)
+			if !ok {
+				return nil, CouldNotExteactContextErr
+			}
+			chatID, _ := getChatID(update)
+			c.Store = update.Message.Text
 
-			err := h.addList(chatID, name, store, nil)
+			err := h.addList(chatID, c.Title, c.Store, c.DueDate)
 			if err != nil {
 				return nil, fmt.Errorf("error inserting shopping_list: %w", err)
 			}
@@ -73,7 +98,7 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, err
 			}
 
-			return nil, nil
+			return c, nil
 		},
 	}, false
 }

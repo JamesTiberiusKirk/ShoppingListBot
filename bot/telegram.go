@@ -68,7 +68,6 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 			// TODO: NEED TO figure out a way to manage groups in here
 			command := ""
 			index := 0
-			previous := []tgbotapi.Update{}
 			var previousContext interface{}
 
 			if message.IsCommand() {
@@ -80,7 +79,6 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 				}
 				command = c.Command
 				index = c.Next
-				previous = c.PastUpdates
 				previousContext = c.Context
 			}
 
@@ -99,7 +97,7 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 				continue
 			}
 
-			nextContext, err := journey[index](previousContext, update, previous)
+			nextContext, err := journey[index](previousContext, update)
 			if err != nil {
 				if err != handlers.JourneryExitErr && err != handlers.UserErr {
 					log.Printf("[HANDLER ERROR]: ChatID: %d, %s", message.Chat.ID, err.Error())
@@ -114,10 +112,9 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 
 			if len(journey)-1 > index {
 				contexHandlerTracker[chatID] = handlers.JourneyTracker{
-					Next:        index + 1,
-					Command:     command,
-					PastUpdates: append(previous, update),
-					Context:     nextContext,
+					Next:    index + 1,
+					Command: command,
+					Context: nextContext,
 				}
 				log.Printf("next %d, %d", chatID, index)
 				continue
@@ -126,10 +123,9 @@ func StartBot(token string, debug bool, db *clients.DB) error {
 			if infinite {
 				log.Printf("infinite %d, %d", chatID, index)
 				contexHandlerTracker[chatID] = handlers.JourneyTracker{
-					Next:        index,
-					Command:     command,
-					PastUpdates: append(previous, update),
-					Context:     nextContext,
+					Next:    index,
+					Command: command,
+					Context: nextContext,
 				}
 				continue
 			}

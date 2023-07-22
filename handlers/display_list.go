@@ -44,12 +44,21 @@ type DisplayListHandlerContext struct {
 func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
 		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+			func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 				log.Print("[HANDLER]: Display List Handler")
 
 				lists, err := h.getLists(update.Message.Chat.ID)
 				if err != nil {
 					return nil, err
+				}
+
+				if len(lists) < 1 {
+					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "There are no lists to chose from")
+					_, err = h.sendMsg(msg)
+					if err != nil {
+						return nil, err
+					}
+					return nil, JourneryExitErr
 				}
 
 				c := DisplayListHandlerContext{
@@ -78,7 +87,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 				return c, nil
 			}),
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Display List Handler 2")
 			c, ok := context.(DisplayListHandlerContext)
 			if !ok {
@@ -93,12 +102,21 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, fmt.Errorf("error getting items from db: %w", err)
 			}
 
+			if len(items) < 1 {
+				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("There are no items in list %s", c.ShoppingList.Title))
+				_, err = h.sendMsg(msg)
+				if err != nil {
+					return nil, err
+				}
+				return nil, JourneryExitErr
+			}
+
 			for _, i := range items {
 				c.Items = append(c.Items, i)
 			}
 
 			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Please chose the list to display")
-			msg.ReplyMarkup = h.buildKeyboard(c)
+			msg.ReplyMarkup = buildItemsKeyboard(c)
 			_, err = h.sendMsg(msg)
 			if err != nil {
 				return nil, err
@@ -106,7 +124,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			return c, nil
 		},
-		func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error) {
+		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Display List Handler 2")
 
 			c, ok := context.(DisplayListHandlerContext)
@@ -114,7 +132,16 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, CouldNotExteactContextErr
 			}
 
-			itemID := update.CallbackQuery.Data
+			itemID := ""
+			data := update.CallbackQuery.Data
+			switch data {
+			case "edit":
+			case "done":
+
+			default:
+				itemID = data
+			}
+
 			itemIndex := -1
 			for index, i := range c.Items {
 				if i.ID == itemID {
@@ -126,16 +153,13 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, fmt.Errorf("could not find item ID: %s", itemID)
 			}
 
-			log.Print(c.Items[itemIndex].Purchased)
 			c.Items[itemIndex].Purchased = !c.Items[itemIndex].Purchased
-			log.Print(c.Items[itemIndex].Purchased)
-
 			err := h.toggleItemPurchase(c.Items[itemIndex].ID)
 			if err != nil {
 				return nil, fmt.Errorf("error toggling item purchace in db id: %s, err: %w", c.Items[itemIndex].ID, err)
 			}
 
-			markup := h.buildKeyboard(c)
+			markup := buildItemsKeyboard(c)
 			msg := tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, markup)
 			_, err = h.botReq(msg)
 			if err != nil {
@@ -147,7 +171,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	}, true
 }
 
-func (h *DisplayListHandler) buildKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMarkup {
+func buildItemsKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMarkup {
 	kbRows := [][]tgbotapi.InlineKeyboardButton{}
 	for _, i := range c.Items {
 		text := ""
@@ -166,5 +190,14 @@ func (h *DisplayListHandler) buildKeyboard(c DisplayListHandlerContext) tgbotapi
 		)
 		// TODO: need to make another bottom KB row in order to allow the user to exit or modify the list
 	}
+
+	kbRows = append(
+		kbRows,
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Done", "done"),
+			tgbotapi.NewInlineKeyboardButtonData("Edit", "edit"),
+		),
+	)
+
 	return tgbotapi.NewInlineKeyboardMarkup(kbRows...)
 }

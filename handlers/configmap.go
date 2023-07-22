@@ -14,15 +14,14 @@ var (
 )
 
 type JourneyTracker struct {
-	Command     string
-	Next        int
-	PastUpdates []tgbotapi.Update
-	Context     interface{}
+	Command string
+	Next    int
+	Context interface{}
 }
 
 // TODO: finish cleaning up the interfave by remiing previous
 // can just keep previous in the handler's struct if needed
-type HandlerFunc func(context interface{}, update tgbotapi.Update, previous []tgbotapi.Update) (interface{}, error)
+type HandlerFunc func(context interface{}, update tgbotapi.Update) (interface{}, error)
 type HandlerInterface interface {
 	// GetHandlerJourney returns handler funcs jouneys and weather or not the final elment in the array is to be called endlesly
 	GetHandlerJourney() ([]HandlerFunc, bool)
@@ -52,9 +51,9 @@ func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *clients.DB) map[string]HandlerInterface {
 	return map[string]HandlerInterface{
 		"start":    NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
-		"newlist":  NewNewListHandler(bot.Send, db.NewShoppingList),
+		"newlist":  NewNewListHandler(bot.Send, db.NewShoppingList, db.CheckIfChatExists),
 		"additems": NewAddItemsHandler(bot.Send, db.GetListsByChat, db.AddItemsToList),
 		"displaylist": NewDisplayListHandler(bot.Send, bot.Request, db.GetListsByChat,
-			db.GetItemsByList, db.ToggleItemPurchase, db.CheckRegistration),
+			db.GetItemsByList, db.ToggleItemPurchase, db.CheckIfChatExists),
 	}
 }
