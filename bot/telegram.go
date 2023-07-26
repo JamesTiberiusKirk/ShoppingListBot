@@ -43,6 +43,9 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 			log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
 		}
 
+		commands := handlers.GetHandlerCommandList()
+		_, err = bot.Request(commands)
+
 		updates = bot.ListenForWebhook("/" + bot.Token)
 		go http.ListenAndServe("0.0.0.0:443", nil)
 
@@ -52,18 +55,18 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 			return err
 		}
 
-		bot.Debug = debug
 		log.Printf("Authorized on account %s", bot.Self.UserName)
+		bot.Debug = debug
 		botcfg := tgbotapi.NewUpdate(0)
 		botcfg.Timeout = 60
+
+		commands := handlers.GetHandlerCommandList()
+		_, err = bot.Request(commands)
 
 		updates = bot.GetUpdatesChan(botcfg)
 	}
 
 	jouneyMap := handlers.NewHandlerJounreyMap(bot, db)
-
-	commands := handlers.GetHandlerCommandList()
-	_, err = bot.Request(commands)
 
 	for update := range updates {
 		// TODO: wrap everything in a gorutine? dont forget to use the apropriate map type for gorutines
