@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	log "github.com/inconshreveable/log15"
 )
 
 type NewListHandler struct {
@@ -38,11 +38,12 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
 		chatRegistered(h.sendMsg, h.checkRegistration,
 			func(context []byte, update tgbotapi.Update) (interface{}, error) {
-				log.Print("[HANDLER]: New List Handler")
+				log.Info("[HANDLER]: New List Handler")
 
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please Chose a name for the list")
 				_, err := h.sendMsg(msg)
 				if err != nil {
+					log.Error("Error sending message", "error", err)
 					return nil, err
 				}
 
@@ -52,7 +53,7 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			},
 		),
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Printf("[CALLBACK]: New list contextual reply callback with name %s", update.Message.Text)
+			log.Info("[CALLBACK]: New list contextual reply callback with name", "text", update.Message.Text)
 
 			chatID, _ := getChatID(update)
 
@@ -63,6 +64,7 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			var c NewListHandlerContext
 			err := json.Unmarshal(context, &c)
 			if err != nil {
+				log.Error("Error unmarshaling context", "error", err)
 				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
@@ -70,13 +72,14 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			msg := tgbotapi.NewMessage(chatID, "Now, please chose a store")
 			_, err = h.sendMsg(msg)
 			if err != nil {
+				log.Error("Error sending message", "error", err)
 				return nil, err
 			}
 
 			return c, nil
 		},
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Printf("[CALLBACK]: New list contextual reply callback 1 with name %s", update.Message.Text)
+			log.Info("[CALLBACK]: New list contextual reply callback 1 with name", "text", update.Message.Text)
 
 			if update.Message.Text == "" {
 				return nil, JourneryExitErr
@@ -85,6 +88,7 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			var c NewListHandlerContext
 			err := json.Unmarshal(context, &c)
 			if err != nil {
+				log.Error("Error unmarshaling context", "error", err)
 				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
@@ -93,6 +97,7 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			err = h.addList(chatID, c.Title, c.Store, c.DueDate)
 			if err != nil {
+				log.Error("Error inserting shopping list", "error", err)
 				return nil, fmt.Errorf("error inserting shopping_list: %w", err)
 			}
 

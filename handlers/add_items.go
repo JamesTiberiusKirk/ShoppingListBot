@@ -3,11 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	log "github.com/inconshreveable/log15"
 )
 
 type AddItemsHandler struct {
@@ -37,11 +37,12 @@ type AddItemsHandlerContext struct {
 func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Print("[HANDLER]: Add Items Handler")
+			log.Info("[HANDLER]: Add Items Handler")
 
 			chatID, _ := getChatID(update)
 			lists, err := h.getLists(update.Message.Chat.ID)
 			if err != nil {
+				log.Error("Error getting lists from db", "error", err)
 				return nil, err
 			}
 
@@ -49,6 +50,7 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				msg := tgbotapi.NewMessage(chatID, "There are no lists")
 				_, err = h.sendMsg(msg)
 				if err != nil {
+					log.Error("Error sending message", "error", err)
 					return nil, err
 				}
 				return nil, JourneryExitErr
@@ -72,19 +74,21 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
 			_, err = h.sendMsg(msg)
 			if err != nil {
+				log.Error("Error sending message", "error", err)
 				return nil, err
 			}
 
 			return c, nil
 		},
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Print("[HANDLER]: Add Items Handler 2")
+			log.Info("[HANDLER]: Add Items Handler 2")
 			chatID := update.CallbackQuery.Message.Chat.ID
 			listID := update.CallbackQuery.Data
 
 			var c AddItemsHandlerContext
 			err := json.Unmarshal(context, &c)
 			if err != nil {
+				log.Error("Error unmarshaling context", "error", err)
 				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
@@ -97,13 +101,14 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			_, err = h.sendMsg(msg)
 			if err != nil {
+				log.Error("Error sending message", "error", err)
 				return nil, err
 			}
 
 			return c, nil
 		},
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Print("[HANDLER]: Add Items Handler 2")
+			log.Info("[HANDLER]: Add Items Handler 2")
 			chatID, _ := getChatID(update)
 
 			var message tgbotapi.Message
@@ -118,24 +123,32 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			var c AddItemsHandlerContext
 			err := json.Unmarshal(context, &c)
 			if err != nil {
+				log.Error("Error unmarshaling context", "error", err)
 				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
 			if strings.ToUpper(message.Text) == "DONE" {
-				log.Printf("[HANDLER]: ITEMS: %+v", c.Items)
+				log.Info("[HANDLER]:", "Items", c.Items)
 				err := h.addItems(c.ShoppingList.ID, c.Items)
 				if err != nil {
+					log.Error("Error adding items to db", "error", err)
 					return nil, fmt.Errorf("error inserting items into list %s, %w", c.ShoppingList.ID, err)
 				}
 
-				// TODO: need to add some nice formatting here so im not just dumping the array on the suer
-				msg := tgbotapi.NewMessage(
-					chatID,
-					fmt.Sprintf("Adding items %+v, to %s", c.Items, c.ShoppingList.Title),
-				)
+				textMessage := "Adding items: "
+				for i, item := range c.Items {
+					if i >= len(c.Items)-1 || i == 0 {
+						textMessage = fmt.Sprintf("%s %s", textMessage, item)
+						continue
+					}
+					textMessage = fmt.Sprintf("%s, %s", textMessage, item)
+				}
+				textMessage = fmt.Sprintf("%s to %s", textMessage, c.ShoppingList.Title)
 
+				msg := tgbotapi.NewMessage(chatID, textMessage)
 				_, err = h.sendMsg(msg)
 				if err != nil {
+					log.Error("Error sending message", "error", err)
 					return nil, err
 				}
 
@@ -143,7 +156,6 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			}
 
 			c.Items = append(c.Items, message.Text)
-
 			return c, nil
 		},
 	}, true

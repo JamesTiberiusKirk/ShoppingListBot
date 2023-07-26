@@ -1,9 +1,9 @@
 package config
 
 import (
-	"log"
 	"os"
 
+	log "github.com/inconshreveable/log15"
 	"github.com/joho/godotenv"
 )
 
@@ -16,7 +16,7 @@ type EnvConfig struct {
 func GetConfig() EnvConfig {
 	err := godotenv.Load()
 	if err != nil {
-		log.Print("No .env getting from actual env")
+		log.Info("No .env getting from actual env")
 	}
 
 	return EnvConfig{

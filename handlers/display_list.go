@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	log "github.com/inconshreveable/log15"
 )
 
 type DisplayListHandler struct {
@@ -46,7 +46,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
 		chatRegistered(h.sendMsg, h.checkRegistration,
 			func(context []byte, update tgbotapi.Update) (interface{}, error) {
-				log.Print("[HANDLER]: Display List Handler")
+				log.Info("[HANDLER]: Display List Handler")
 
 				lists, err := h.getLists(update.Message.Chat.ID)
 				if err != nil {
@@ -83,17 +83,19 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
 				_, err = h.sendMsg(msg)
 				if err != nil {
+					log.Error("Error sending message", "error", err)
 					return nil, err
 				}
 
 				return c, nil
 			}),
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Print("[HANDLER]: Display List Handler 2")
+			log.Info("[HANDLER]: Display List Handler 2")
 
 			var c DisplayListHandlerContext
 			err := json.Unmarshal(context, &c)
 			if err != nil {
+				log.Error("Could not extract context", "error", err)
 				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
@@ -102,6 +104,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			items, err := h.getItems(listID)
 			if err != nil {
+				log.Error("Error getting items", "error", err)
 				return nil, fmt.Errorf("error getting items from db: %w", err)
 			}
 
@@ -109,6 +112,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("There are no items in list %s", c.ShoppingList.Title))
 				_, err = h.sendMsg(msg)
 				if err != nil {
+					log.Error("Error sending message", "error", err)
 					return nil, err
 				}
 				return nil, JourneryExitErr
@@ -122,26 +126,28 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			msg.ReplyMarkup = buildItemsKeyboard(c)
 			_, err = h.sendMsg(msg)
 			if err != nil {
+				log.Error("Error sending message", "error", err)
 				return nil, err
 			}
 
 			return c, nil
 		},
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Print("[HANDLER]: Display List Handler 2")
+			log.Info("[HANDLER]: Display List Handler 2")
 
 			var c DisplayListHandlerContext
 			err := json.Unmarshal(context, &c)
 			if err != nil {
+				log.Error("Error unmarshaling context", "error", err)
 				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
+			// TODO: need to finish implementation
 			itemID := ""
 			data := update.CallbackQuery.Data
 			switch data {
 			case "edit":
 			case "done":
-
 			default:
 				itemID = data
 			}
@@ -154,11 +160,13 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			}
 
 			if itemIndex == -1 {
+				log.Error("Error could not find itemIndex")
 				return nil, fmt.Errorf("could not find item ID: %s", itemID)
 			}
 
 			err = h.toggleItemPurchase(c.Items[itemIndex].ID)
 			if err != nil {
+				log.Error("Error toggling item purchace", "error", err)
 				return nil, fmt.Errorf("error toggling item purchace in db id: %s, err: %w", c.Items[itemIndex].ID, err)
 			}
 			// NOTE: on a technical level this could present a race condition since it does not display db values
@@ -169,6 +177,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			msg := tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, markup)
 			_, err = h.botReq(msg)
 			if err != nil {
+				log.Error("Error sending bot request", "error", err)
 				return nil, fmt.Errorf("error making bot request: %w", err)
 			}
 
@@ -182,11 +191,11 @@ func buildItemsKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMark
 	for _, i := range c.Items {
 		text := ""
 		if i.Purchased {
-			log.Print("PURCHASED")
+			log.Info("PURCHASED")
 			text += "✅ "
 		}
 		text += i.ItemText
-		log.Print(text)
+		log.Info(text)
 
 		kbRows = append(
 			kbRows,
