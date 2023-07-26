@@ -10,7 +10,7 @@ COPY --from=builder /build/shopping-list-bot /app/
 COPY --from=builder /build/sql/ /app/sql/
 WORKDIR /app
 
-EXPOSE 8080
+# EXPOSE 8080
 
 USER nonroot:nonroot
 CMD ["./shopping-list-bot"]
