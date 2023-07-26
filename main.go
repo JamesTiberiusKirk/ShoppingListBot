@@ -14,7 +14,7 @@ func main() {
 		panic(err)
 	}
 
-	err = bot.StartBot(c.TelegramToken, c.TelegramWebHookURL, true, db)
+	err = bot.StartBot(c.TelegramToken, c.TelegramWebHookURL, false, db)
 	if err != nil {
 		panic(err)
 	}

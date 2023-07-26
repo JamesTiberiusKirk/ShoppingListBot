@@ -1,9 +1,7 @@
 package bot
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/handlers"
@@ -15,56 +13,56 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 	var err error
 	var updates tgbotapi.UpdatesChannel
 
-	if telegramWebHookURL != "" {
-		bot, err = tgbotapi.NewBotAPI(token)
-		if err != nil {
-			return err
-		}
-
-		bot.Debug = debug
-		log.Printf("Authorized on account %s", bot.Self.UserName)
-
-		wh, err := tgbotapi.NewWebhook(fmt.Sprintf("%s/%s", telegramWebHookURL, bot.Token))
-		if err != nil {
-			return err
-		}
-
-		_, err = bot.Request(wh)
-		if err != nil {
-			return err
-		}
-
-		info, err := bot.GetWebhookInfo()
-		if err != nil {
-			return err
-		}
-
-		if info.LastErrorDate != 0 {
-			log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
-		}
-
-		commands := handlers.GetHandlerCommandList()
-		_, err = bot.Request(commands)
-
-		updates = bot.ListenForWebhook("/" + bot.Token)
-		go http.ListenAndServe("0.0.0.0:443", nil)
-
-	} else {
-		bot, err = tgbotapi.NewBotAPI(token)
-		if err != nil {
-			return err
-		}
-
-		log.Printf("Authorized on account %s", bot.Self.UserName)
-		bot.Debug = debug
-		botcfg := tgbotapi.NewUpdate(0)
-		botcfg.Timeout = 60
-
-		commands := handlers.GetHandlerCommandList()
-		_, err = bot.Request(commands)
-
-		updates = bot.GetUpdatesChan(botcfg)
+	// if telegramWebHookURL != "" {
+	// 	bot, err = tgbotapi.NewBotAPI(token)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	//
+	// 	bot.Debug = debug
+	// 	log.Printf("Authorized on account %s", bot.Self.UserName)
+	//
+	// 	wh, err := tgbotapi.NewWebhook(fmt.Sprintf("%s/%s", telegramWebHookURL, bot.Token))
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	//
+	// 	_, err = bot.Request(wh)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	//
+	// 	info, err := bot.GetWebhookInfo()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	//
+	// 	if info.LastErrorDate != 0 {
+	// 		log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
+	// 	}
+	//
+	// 	commands := handlers.GetHandlerCommandList()
+	// 	_, err = bot.Request(commands)
+	//
+	// 	updates = bot.ListenForWebhook("/" + bot.Token)
+	// 	go http.ListenAndServe("0.0.0.0:443", nil)
+	//
+	// } else {
+	bot, err = tgbotapi.NewBotAPI(token)
+	if err != nil {
+		return err
 	}
+
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+	bot.Debug = debug
+	botcfg := tgbotapi.NewUpdate(0)
+	botcfg.Timeout = 60
+
+	commands := handlers.GetHandlerCommandList()
+	_, err = bot.Request(commands)
+
+	updates = bot.GetUpdatesChan(botcfg)
+	// }
 
 	jouneyMap := handlers.NewHandlerJounreyMap(bot, db)
 
