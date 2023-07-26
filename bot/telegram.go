@@ -1,7 +1,9 @@
 package bot
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/handlers"
@@ -11,24 +13,48 @@ import (
 func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) error {
 	var bot *tgbotapi.BotAPI
 	var err error
+	var updates tgbotapi.UpdatesChannel
+
 	if telegramWebHookURL != "" {
-		bot, err = tgbotapi.NewBotAPIWithAPIEndpoint(token, telegramWebHookURL)
+		bot, err = tgbotapi.NewBotAPI(token)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		bot.Debug = debug
+		log.Printf("Authorized on account %s", bot.Self.UserName)
+		wh, _ := tgbotapi.NewWebhook(fmt.Sprintf("%s/%s", telegramWebHookURL, bot.Token))
+
+		_, err = bot.Request(wh)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		info, err := bot.GetWebhookInfo()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if info.LastErrorDate != 0 {
+			log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
+		}
+
+		updates = bot.ListenForWebhook("/" + bot.Token)
+		go http.ListenAndServe("0.0.0.0:8080", nil)
+
 	} else {
 		bot, err = tgbotapi.NewBotAPI(token)
+		if err != nil {
+			return err
+		}
+
+		bot.Debug = debug
+		log.Printf("Authorized on account %s", bot.Self.UserName)
+		botcfg := tgbotapi.NewUpdate(0)
+		botcfg.Timeout = 60
+
+		updates = bot.GetUpdatesChan(botcfg)
 	}
-
-	if err != nil {
-		return err
-	}
-
-	var botcfg tgbotapi.UpdateConfig
-
-	bot.Debug = debug
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-	botcfg = tgbotapi.NewUpdate(0)
-	botcfg.Timeout = 60
-
-	updates := bot.GetUpdatesChan(botcfg)
 
 	jouneyMap := handlers.NewHandlerJounreyMap(bot, db)
 
