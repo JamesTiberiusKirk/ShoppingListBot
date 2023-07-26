@@ -69,7 +69,7 @@ WHERE chats.telegram_chat_id = $1
 
 -- name: cleanup_chat_journies_by_telegram_chat_id
 DELETE FROM chat_journies
-WHERE id = (
+WHERE chat_id = (
     SELECT id FROM chats WHERE telegram_chat_id = $1
 );
 

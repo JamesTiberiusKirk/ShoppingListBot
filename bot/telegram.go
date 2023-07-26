@@ -106,7 +106,7 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 				c, err := db.GetJourneyByChat(message.Chat.ID)
 				if err != nil {
 					// HANDLE DB ERROR
-					log.Printf("[HANDLER ERROR]: chatID %d, trying to ccess handler journey DB error: %s", message.Chat.ID, err.Error())
+					log.Printf("[HANDLER ERROR]: chatID %d, trying to access handler journey DB error: %s", message.Chat.ID, err.Error())
 					continue
 				}
 
@@ -120,12 +120,12 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 			handlerJourney, ok := jouneyMap[command]
 			if !ok {
 				// command not found, for now just ignore it
-				log.Printf("[HANDLER ERROR]: chatID %d, trying to ccess handler journey which is nil", message.Chat.ID)
+				log.Printf("[HANDLER ERROR]: chatID %d, trying to access handler journey which is nil", message.Chat.ID)
 				continue
 			}
 			journey, infinite := handlerJourney.GetHandlerJourney()
 			if journey[index] == nil {
-				log.Printf("[HANDLER ERROR]: chatID %d, trying to ccess handler journey which is nil", message.Chat.ID)
+				log.Printf("[HANDLER ERROR]: chatID %d, trying to access handler journey which is nil", message.Chat.ID)
 				continue
 			}
 
@@ -146,6 +146,8 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 				}
 				continue
 			}
+
+			log.Printf("len %d index %d", len(journey), index)
 
 			if len(journey)-1 > index {
 				_, err := db.UpsertJourneyByTelegeramChatID(chatID, command, index+1, nextContext)
