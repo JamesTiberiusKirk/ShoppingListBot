@@ -48,6 +48,7 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 	// 	go http.ListenAndServe("0.0.0.0:443", nil)
 	//
 	// } else {
+
 	bot, err = tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return err
