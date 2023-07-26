@@ -104,7 +104,7 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 					}
 				}
 
-				log.Info("cleaning up %d, %d", chatID, index)
+				log.Info("cleaning up", "chatID", chatID, "index", index)
 				err := db.CleanupChatJourney(chatID)
 				if err != nil {
 					log.Error("[HANDLER ERROR]: trying to cleanup handler journey DB", "chatID", chatID, "error", err)

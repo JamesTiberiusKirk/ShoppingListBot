@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS chat_journies (
     chat_id BIGINT UNIQUE NOT NULL,
     command VARCHAR(255) NOT NULL,
     next INTEGER NOT NULL,
-    created_at DATE,
-    updated_at DATE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
     context JSONB,
     FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
 );
