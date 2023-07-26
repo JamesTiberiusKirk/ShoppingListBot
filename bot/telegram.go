@@ -18,7 +18,7 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 	if telegramWebHookURL != "" {
 		bot, err = tgbotapi.NewBotAPI(token)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		bot.Debug = debug
@@ -27,12 +27,12 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 
 		_, err = bot.Request(wh)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		info, err := bot.GetWebhookInfo()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		if info.LastErrorDate != 0 {
