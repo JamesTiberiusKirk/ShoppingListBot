@@ -11,17 +11,12 @@ var (
 	JourneryExitErr           = errors.New("exiting journery")
 	CouldNotExteactContextErr = errors.New("could not extract context")
 	UserErr                   = errors.New("user error")
+	// TODO: Maybe think of making some error which would posibly just skip direclty to next handler?
 )
-
-type JourneyTracker struct {
-	Command string
-	Next    int
-	Context interface{}
-}
 
 // TODO: finish cleaning up the interfave by remiing previous
 // can just keep previous in the handler's struct if needed
-type HandlerFunc func(context interface{}, update tgbotapi.Update) (interface{}, error)
+type HandlerFunc func(context []byte, update tgbotapi.Update) (interface{}, error)
 type HandlerInterface interface {
 	// GetHandlerJourney returns handler funcs jouneys and weather or not the final elment in the array is to be called endlesly
 	GetHandlerJourney() ([]HandlerFunc, bool)

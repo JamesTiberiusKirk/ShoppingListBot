@@ -34,10 +34,6 @@ func StartBot(token string, debug bool, db *db.DB) error {
 	commands := handlers.GetHandlerCommandList()
 	_, err = bot.Request(commands)
 
-	// TODO: This needs to memcached or redis
-	// This way I can add timed cleanup there in the form of expiry time (not sure if i can in memcached)
-	contexHandlerTracker := map[int64]handlers.JourneyTracker{}
-
 	for update := range updates {
 		// TODO: wrap everything in a gorutine? dont forget to use the apropriate map type for gorutines
 		if update.Message == nil && update.CallbackQuery == nil {
@@ -66,20 +62,24 @@ func StartBot(token string, debug bool, db *db.DB) error {
 		if message != nil {
 			// TODO: cleanup this mess
 			// TODO: NEED TO figure out a way to manage groups in here
+			// So far a workaround I have found is to set the bot as admin in the groupchat
 			command := ""
 			index := 0
-			var previousContext interface{}
+			var previousContext []byte
 
 			if message.IsCommand() {
 				command = message.Command()
 			} else {
-				c, ok := contexHandlerTracker[message.Chat.ID]
-				if !ok {
+				c, err := db.GetJourneyByChat(message.Chat.ID)
+				if err != nil {
+					// HANDLE DB ERROR
+					log.Printf("[HANDLER ERROR]: chatID %d, trying to ccess handler journey DB error: %s", message.Chat.ID, err.Error())
 					continue
 				}
+
 				command = c.Command
 				index = c.Next
-				previousContext = c.Context
+				previousContext = c.RawContext
 			}
 
 			chatID := message.Chat.ID
@@ -91,7 +91,6 @@ func StartBot(token string, debug bool, db *db.DB) error {
 				continue
 			}
 			journey, infinite := handlerJourney.GetHandlerJourney()
-
 			if journey[index] == nil {
 				log.Printf("[HANDLER ERROR]: chatID %d, trying to ccess handler journey which is nil", message.Chat.ID)
 				continue
@@ -106,33 +105,46 @@ func StartBot(token string, debug bool, db *db.DB) error {
 				}
 
 				log.Printf("cleaning up %d, %d", chatID, index)
-				delete(contexHandlerTracker, chatID)
+				err := db.CleanupChatJourney(chatID)
+				if err != nil {
+					// HANDLE DB ERROR
+					log.Printf("[HANDLER ERROR]: chatID %d, trying to cleanup handler journey DB error: %s", chatID, err.Error())
+					continue
+				}
 				continue
 			}
 
 			if len(journey)-1 > index {
-				contexHandlerTracker[chatID] = handlers.JourneyTracker{
-					Next:    index + 1,
-					Command: command,
-					Context: nextContext,
+				_, err := db.UpsertJourneyByTelegeramChatID(chatID, command, index+1, nextContext)
+				if err != nil {
+					// HANDLE DB ERROR
+					log.Printf("[HANDLER ERROR]: chatID %d, trying to upsert handler journey DB error: %s", chatID, err.Error())
+					continue
 				}
+
 				log.Printf("next %d, %d", chatID, index)
 				continue
 			}
 
 			if infinite {
 				log.Printf("infinite %d, %d", chatID, index)
-				contexHandlerTracker[chatID] = handlers.JourneyTracker{
-					Next:    index,
-					Command: command,
-					Context: nextContext,
+				_, err := db.UpsertJourneyByTelegeramChatID(chatID, command, index, nextContext)
+				if err != nil {
+					// HANDLE DB ERROR
+					log.Printf("[INFINITE HANDLER ERROR]: chatID %d, trying to upsert handler journey DB error: %s", chatID, err.Error())
+					continue
 				}
 				continue
 			}
 
 			// if this is the last in the journey, cleanup
 			log.Printf("cleaning up %d, %d", chatID, index)
-			delete(contexHandlerTracker, chatID)
+			err = db.CleanupChatJourney(chatID)
+			if err != nil {
+				// HANDLE DB ERROR
+				log.Printf("[HANDLER ERROR]: chatID %d, trying to cleanup handler journey DB error: %s", chatID, err.Error())
+				continue
+			}
 		}
 	}
 

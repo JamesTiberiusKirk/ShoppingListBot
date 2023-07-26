@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -44,7 +45,7 @@ type DisplayListHandlerContext struct {
 func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
 		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+			func(context []byte, update tgbotapi.Update) (interface{}, error) {
 				log.Print("[HANDLER]: Display List Handler")
 
 				lists, err := h.getLists(update.Message.Chat.ID)
@@ -87,11 +88,13 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 				return c, nil
 			}),
-		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+		func(context []byte, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Display List Handler 2")
-			c, ok := context.(DisplayListHandlerContext)
-			if !ok {
-				return nil, CouldNotExteactContextErr
+
+			var c DisplayListHandlerContext
+			err := json.Unmarshal(context, &c)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
 			listID := update.CallbackQuery.Data
@@ -124,12 +127,13 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			return c, nil
 		},
-		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+		func(context []byte, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Display List Handler 2")
 
-			c, ok := context.(DisplayListHandlerContext)
-			if !ok {
-				return nil, CouldNotExteactContextErr
+			var c DisplayListHandlerContext
+			err := json.Unmarshal(context, &c)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
 			itemID := ""
@@ -153,11 +157,13 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, fmt.Errorf("could not find item ID: %s", itemID)
 			}
 
-			c.Items[itemIndex].Purchased = !c.Items[itemIndex].Purchased
-			err := h.toggleItemPurchase(c.Items[itemIndex].ID)
+			err = h.toggleItemPurchase(c.Items[itemIndex].ID)
 			if err != nil {
 				return nil, fmt.Errorf("error toggling item purchace in db id: %s, err: %w", c.Items[itemIndex].ID, err)
 			}
+			// NOTE: on a technical level this could present a race condition since it does not display db values
+			// but since this can only be modified on one chat then should be fine
+			c.Items[itemIndex].Purchased = !c.Items[itemIndex].Purchased
 
 			markup := buildItemsKeyboard(c)
 			msg := tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, markup)

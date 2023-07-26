@@ -34,8 +34,42 @@ VALUES (:list_id, :text, FALSE)
 SELECT * FROM shopping_list_items WHERE shopping_list_id = $1
 
 -- name: toggle_item_purchase
-UPDATE shopping_list_items
-SET purchased = NOT purchased
-WHERE id = $1
+UPDATE shopping_list_items SET purchased = NOT purchased WHERE id = $1
 
+
+-- JOURNIES --
+
+-- name: upsert_journey_by_telegram_chat_id
+INSERT INTO chat_journies (chat_id, command, next, context, created_at, updated_at)
+VALUES (
+    (
+        SELECT id FROM chats WHERE telegram_chat_id = :telegram_chat_id
+    ),
+    :command,
+    :next,
+    :context,
+    (
+        SELECT CURRENT_TIMESTAMP
+    ),
+    (
+        SELECT CURRENT_TIMESTAMP
+    )
+)
+ON CONFLICT (chat_id) DO UPDATE SET
+        command = COALESCE(NULLIF(EXCLUDED.command, ''), chat_journies.command),
+        next = COALESCE(NULLIF(EXCLUDED.next, -1), chat_journies.next),
+        context = EXCLUDED.context,
+        updated_at = EXCLUDED.updated_at
+RETURNING *;
+
+-- name: get_chat_journey_by_telegram_chat_id
+SELECT * FROM chat_journies 
+JOIN chats ON chat_journies.chat_id = chats.id
+WHERE chats.telegram_chat_id = $1
+
+-- name: cleanup_chat_journies_by_telegram_chat_id
+DELETE FROM chat_journies
+WHERE id = (
+    SELECT id FROM chats WHERE telegram_chat_id = $1
+);
 

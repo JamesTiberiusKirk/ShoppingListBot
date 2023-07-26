@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -36,7 +37,7 @@ type NewListHandlerContext struct {
 func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
 		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+			func(context []byte, update tgbotapi.Update) (interface{}, error) {
 				log.Print("[HANDLER]: New List Handler")
 
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please Chose a name for the list")
@@ -50,7 +51,7 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return c, nil
 			},
 		),
-		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+		func(context []byte, update tgbotapi.Update) (interface{}, error) {
 			log.Printf("[CALLBACK]: New list contextual reply callback with name %s", update.Message.Text)
 
 			chatID, _ := getChatID(update)
@@ -59,35 +60,38 @@ func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, JourneryExitErr
 			}
 
-			c, ok := context.(NewListHandlerContext)
-			if !ok {
-				return nil, CouldNotExteactContextErr
+			var c NewListHandlerContext
+			err := json.Unmarshal(context, &c)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
 			c.Title = update.Message.Text
 			msg := tgbotapi.NewMessage(chatID, "Now, please chose a store")
-			_, err := h.sendMsg(msg)
+			_, err = h.sendMsg(msg)
 			if err != nil {
 				return nil, err
 			}
 
 			return c, nil
 		},
-		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+		func(context []byte, update tgbotapi.Update) (interface{}, error) {
 			log.Printf("[CALLBACK]: New list contextual reply callback 1 with name %s", update.Message.Text)
 
 			if update.Message.Text == "" {
 				return nil, JourneryExitErr
 			}
 
-			c, ok := context.(NewListHandlerContext)
-			if !ok {
-				return nil, CouldNotExteactContextErr
+			var c NewListHandlerContext
+			err := json.Unmarshal(context, &c)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
+
 			chatID, _ := getChatID(update)
 			c.Store = update.Message.Text
 
-			err := h.addList(chatID, c.Title, c.Store, c.DueDate)
+			err = h.addList(chatID, c.Title, c.Store, c.DueDate)
 			if err != nil {
 				return nil, fmt.Errorf("error inserting shopping_list: %w", err)
 			}

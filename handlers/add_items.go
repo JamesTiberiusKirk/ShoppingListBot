@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -35,7 +36,7 @@ type AddItemsHandlerContext struct {
 
 func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+		func(context []byte, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler")
 
 			chatID, _ := getChatID(update)
@@ -76,14 +77,15 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			return c, nil
 		},
-		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+		func(context []byte, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler 2")
 			chatID := update.CallbackQuery.Message.Chat.ID
 			listID := update.CallbackQuery.Data
 
-			c, ok := context.(AddItemsHandlerContext)
-			if !ok {
-				return nil, CouldNotExteactContextErr
+			var c AddItemsHandlerContext
+			err := json.Unmarshal(context, &c)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
 			c.ShoppingList = c.ShoppingListsMap[listID]
@@ -93,15 +95,16 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				fmt.Sprintf("Adding to %s, start typing the items and type \"DONE\" when finished", c.ShoppingList.Title),
 			)
 
-			_, err := h.sendMsg(msg)
+			_, err = h.sendMsg(msg)
 			if err != nil {
 				return nil, err
 			}
 
 			return c, nil
 		},
-		func(context interface{}, update tgbotapi.Update) (interface{}, error) {
+		func(context []byte, update tgbotapi.Update) (interface{}, error) {
 			log.Print("[HANDLER]: Add Items Handler 2")
+			chatID, _ := getChatID(update)
 
 			var message tgbotapi.Message
 			if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
@@ -112,9 +115,10 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, JourneryExitErr
 			}
 
-			c, ok := context.(AddItemsHandlerContext)
-			if !ok {
-				return nil, CouldNotExteactContextErr
+			var c AddItemsHandlerContext
+			err := json.Unmarshal(context, &c)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
 			if strings.ToUpper(message.Text) == "DONE" {
@@ -122,6 +126,17 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				err := h.addItems(c.ShoppingList.ID, c.Items)
 				if err != nil {
 					return nil, fmt.Errorf("error inserting items into list %s, %w", c.ShoppingList.ID, err)
+				}
+
+				// TODO: need to add some nice formatting here so im not just dumping the array on the suer
+				msg := tgbotapi.NewMessage(
+					chatID,
+					fmt.Sprintf("Adding items %+v, to %s", c.Items, c.ShoppingList.Title),
+				)
+
+				_, err = h.sendMsg(msg)
+				if err != nil {
+					return nil, err
 				}
 
 				return nil, JourneryExitErr
