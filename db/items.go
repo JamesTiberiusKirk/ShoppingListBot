@@ -2,13 +2,13 @@ package db
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
+	log "github.com/inconshreveable/log15"
 )
 
 func (d *DB) AddItemsToList(listID string, itemsText []string) error {
-	log.Printf("[DB] inserting to shopping_list_items: %+v, %+v", listID, itemsText)
+	log.Info("[DB] inserting to shopping_list_items", "listID", listID, "itemsText", itemsText)
 
 	query, ok := d.queries["add_items"]
 	if !ok {
@@ -33,7 +33,7 @@ func (d *DB) AddItemsToList(listID string, itemsText []string) error {
 }
 
 func (d *DB) GetItemsByList(listID string) ([]types.ShoppingListItem, error) {
-	log.Printf("[DB] quering shopping_list_items table for chat: %+v", listID)
+	log.Info("[DB] quering shopping_list_items table for chat:", "listID", listID)
 
 	query, ok := d.queries["get_items_in_list"]
 	if !ok {
@@ -50,7 +50,7 @@ func (d *DB) GetItemsByList(listID string) ([]types.ShoppingListItem, error) {
 }
 
 func (d *DB) ToggleItemPurchase(itemID string) error {
-	log.Printf("[DB] toggling item purchase: %+v", itemID)
+	log.Info("[DB] toggling item purchase:", "itemID", itemID)
 
 	query, ok := d.queries["toggle_item_purchase"]
 	if !ok {

@@ -3,9 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
+	log "github.com/inconshreveable/log15"
 )
 
 func (d *DB) AddNewChat(chatID int64) error {
@@ -23,7 +23,7 @@ func (d *DB) AddNewChat(chatID int64) error {
 }
 
 func (d *DB) CheckIfChatExists(chatID int64) (bool, error) {
-	log.Printf("[DB] quering chats table for chat: %+v", chatID)
+	log.Info("[DB] quering chats table for chat", "chatID", chatID)
 
 	query, ok := d.queries["get_chat"]
 	if !ok {
