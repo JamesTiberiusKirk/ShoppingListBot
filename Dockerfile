@@ -13,4 +13,4 @@ WORKDIR /app
 # EXPOSE 8080
 
 USER nonroot:nonroot
-CMD ["./shopping-list-bot"]
+ENTRYPOINT ["./shopping-list-bot"]
