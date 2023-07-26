@@ -3,7 +3,7 @@ RUN mkdir /build
 ADD . /build/
 WORKDIR /build 
 RUN go get ./...
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./shopping-list-bot 
+RUN go build -o shopping-list-bot 
 
 FROM alpine
 COPY --from=builder /build/shopping-list-bot /app/
