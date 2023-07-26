@@ -23,7 +23,11 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 
 		bot.Debug = debug
 		log.Printf("Authorized on account %s", bot.Self.UserName)
-		wh, _ := tgbotapi.NewWebhook(fmt.Sprintf("%s/%s", telegramWebHookURL, bot.Token))
+
+		wh, err := tgbotapi.NewWebhook(fmt.Sprintf("%s/%s", telegramWebHookURL, bot.Token))
+		if err != nil {
+			return err
+		}
 
 		_, err = bot.Request(wh)
 		if err != nil {
@@ -40,7 +44,7 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 		}
 
 		updates = bot.ListenForWebhook("/" + bot.Token)
-		go http.ListenAndServe("0.0.0.0:8080", nil)
+		go http.ListenAndServe("0.0.0.0:443", nil)
 
 	} else {
 		bot, err = tgbotapi.NewBotAPI(token)
