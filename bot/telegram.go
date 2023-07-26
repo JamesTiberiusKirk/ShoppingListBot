@@ -8,24 +8,25 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func StartBot(token string, debug bool, db *db.DB) error {
-	bot, err := tgbotapi.NewBotAPI(token)
+func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) error {
+	var bot *tgbotapi.BotAPI
+	var err error
+	if telegramWebHookURL != "" {
+		bot, err = tgbotapi.NewBotAPIWithAPIEndpoint(token, telegramWebHookURL)
+	} else {
+		bot, err = tgbotapi.NewBotAPI(token)
+	}
+
 	if err != nil {
 		return err
 	}
 
 	var botcfg tgbotapi.UpdateConfig
 
-	switch debug {
-	case true:
-		// This thorws a lot more console logs
-		bot.Debug = false
-		log.Printf("Authorized on account %s", bot.Self.UserName)
-		botcfg = tgbotapi.NewUpdate(0)
-		botcfg.Timeout = 60
-	case false:
-		panic("Production mode not implemented yet")
-	}
+	bot.Debug = debug
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+	botcfg = tgbotapi.NewUpdate(0)
+	botcfg.Timeout = 60
 
 	updates := bot.GetUpdatesChan(botcfg)
 

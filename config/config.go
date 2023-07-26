@@ -8,12 +8,9 @@ import (
 )
 
 type EnvConfig struct {
-	TelegramToken string
-	DbUrl         string
-	// DbName        string
-	// DbHost        string
-	// DbUser        string
-	// DbPass        string
+	TelegramToken      string
+	TelegramWebHookURL string
+	DbUrl              string
 }
 
 func GetConfig() EnvConfig {
@@ -23,11 +20,8 @@ func GetConfig() EnvConfig {
 	}
 
 	return EnvConfig{
-		TelegramToken: os.Getenv("TELEGRAM_TOKEN"),
-		DbUrl:         os.Getenv("DB_URL"),
-		// DbName:        os.Getenv("DB_NAME"),
-		// DbHost:        os.Getenv("DB_HOST"),
-		// DbUser:        os.Getenv("DB_USER"),
-		// DbPass:        os.Getenv("DB_PASS"),
+		TelegramToken:      os.Getenv("TELEGRAM_TOKEN"),
+		TelegramWebHookURL: os.Getenv("TELEGRAM_WEBHOOK_URL"),
+		DbUrl:              os.Getenv("DB_URL"),
 	}
 }
