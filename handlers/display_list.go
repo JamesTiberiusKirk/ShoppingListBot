@@ -148,6 +148,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			switch data {
 			case "edit":
 			case "done":
+				return nil, JourneryExitErr
 			default:
 				itemID = data
 			}
@@ -195,7 +196,6 @@ func buildItemsKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMark
 			text += "✅ "
 		}
 		text += i.ItemText
-		log.Info(text)
 
 		kbRows = append(
 			kbRows,

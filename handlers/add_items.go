@@ -135,6 +135,7 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 					return nil, fmt.Errorf("error inserting items into list %s, %w", c.ShoppingList.ID, err)
 				}
 
+				// TODO: smth is broken here
 				textMessage := "Adding items: "
 				for i, item := range c.Items {
 					if i >= len(c.Items)-1 || i == 0 {

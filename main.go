@@ -15,8 +15,27 @@ func main() {
 		panic(err)
 	}
 
-	h := log.CallerFileHandler(log.StdoutHandler)
-	log.Root().SetHandler(h)
+	// h := log.CallerFileHandler(log.StdoutHandler)
+	// log.Root().SetHandler(h)
+
+	logger := log.CallerFileHandler(log.StdoutHandler)
+	log.Root().SetHandler(logger)
+
+	// logger = log.LvlFilterHandler(
+	// 	log.LvlError,
+	// 	log.StreamHandler(os.Stderr, log.TerminalFormat()),
+	// )
+	// log.Root().SetHandler(logger)
+	//
+	// logger = log.LvlFilterHandler(
+	// 	log.LvlInfo,
+	// 	log.StreamHandler(os.Stdout, log.TerminalFormat()),
+	// )
+	// log.Root().SetHandler(logger)
+
+	// errorHandler := log.LvlFilterHandler(log.LvlError)
+	// infoHandler := log.LvlFilterHandler(log.LvlInfo, h)
+	// log.Root().SetHandler(h)
 
 	err = bot.StartBot(c.TelegramToken, c.TelegramWebHookURL, false, db)
 	if err != nil {
