@@ -127,23 +127,6 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				c.Items = append(c.Items, i)
 			}
 
-			// To delete the previous keyboard/message
-			// deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
-			// _, err = h.botReq(deleteMsg)
-			// if err != nil {
-			// 	log.Error("Error deleting inline keyboard", "error", err)
-			// 	return nil, fmt.Errorf("error making bot request: %w", err)
-			// }
-
-			// To send new items kb
-			// msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Please chose the list to display")
-			// msg.ReplyMarkup = buildItemsKeyboard(c)
-			// _, err = h.sendMsg(msg)
-			// if err != nil {
-			// 	log.Error("Error sending message", "error", err)
-			// 	return nil, err
-			// }
-
 			markup := buildItemsKeyboard(c)
 			msg := tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "Please chose the list to display", markup)
 			_, err = h.botReq(msg)

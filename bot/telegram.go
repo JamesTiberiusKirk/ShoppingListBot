@@ -131,11 +131,11 @@ func handleUpdate(update tgbotapi.Update, journeyMap map[string]handlers.Handler
 		}
 
 		if infinite {
-			log.Info("[SCHEDULER]: infinite %d, %d", chatID, index)
+			log.Info("[SCHEDULER]: infinite", "chatID", chatID, "error", err)
 			_, err := db.UpsertJourneyByTelegeramChatID(chatID, command, index, nextContext)
 			if err != nil {
 				// HANDLE DB ERROR
-				log.Info("[INFINITE HANDLER ERROR]: trying to upsert handler journey DB", "chatID", chatID, "error", err)
+				log.Error("[INFINITE HANDLER ERROR]: trying to upsert handler journey DB", "chatID", chatID, "error", err)
 				return
 			}
 			return
@@ -146,7 +146,7 @@ func handleUpdate(update tgbotapi.Update, journeyMap map[string]handlers.Handler
 		err = db.CleanupChatJourney(chatID)
 		if err != nil {
 			// HANDLE DB ERROR
-			log.Info("[DB ERROR]: trying to cleanup handler journey DB", "chatID", chatID, "error", err)
+			log.Error("[DB ERROR]: trying to cleanup handler journey DB", "chatID", chatID, "error", err)
 			return
 		}
 	}
