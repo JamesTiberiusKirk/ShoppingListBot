@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -16,6 +17,7 @@ type DisplayListHandler struct {
 	getItems           func(listID string) ([]types.ShoppingListItem, error)
 	toggleItemPurchase func(itemID string) error
 	checkRegistration  func(chatID int64) (bool, error)
+	deleteItem         func(itemID string) error
 }
 
 func NewDisplayListHandler(
@@ -25,6 +27,7 @@ func NewDisplayListHandler(
 	getItems func(listID string) ([]types.ShoppingListItem, error),
 	toggleItemPurchase func(itemID string) error,
 	checkRegistration func(chatID int64) (bool, error),
+	deleteItem func(itemID string) error,
 ) *DisplayListHandler {
 	return &DisplayListHandler{
 		sendMsg:            msgSener,
@@ -33,13 +36,15 @@ func NewDisplayListHandler(
 		getItems:           getItems,
 		toggleItemPurchase: toggleItemPurchase,
 		checkRegistration:  checkRegistration,
+		deleteItem:         deleteItem,
 	}
 }
 
 type DisplayListHandlerContext struct {
-	ShoppingListsMap map[string]types.ShoppingList
-	ShoppingList     types.ShoppingList
-	Items            []types.ShoppingListItem
+	ShoppingListsMap      map[string]types.ShoppingList
+	ShoppingList          types.ShoppingList
+	Items                 []types.ShoppingListItem
+	ItemsKeyboardEditable bool
 }
 
 func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
@@ -122,18 +127,35 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				c.Items = append(c.Items, i)
 			}
 
-			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Please chose the list to display")
-			msg.ReplyMarkup = buildItemsKeyboard(c)
-			_, err = h.sendMsg(msg)
+			// To delete the previous keyboard/message
+			// deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
+			// _, err = h.botReq(deleteMsg)
+			// if err != nil {
+			// 	log.Error("Error deleting inline keyboard", "error", err)
+			// 	return nil, fmt.Errorf("error making bot request: %w", err)
+			// }
+
+			// To send new items kb
+			// msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Please chose the list to display")
+			// msg.ReplyMarkup = buildItemsKeyboard(c)
+			// _, err = h.sendMsg(msg)
+			// if err != nil {
+			// 	log.Error("Error sending message", "error", err)
+			// 	return nil, err
+			// }
+
+			markup := buildItemsKeyboard(c)
+			msg := tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "Please chose the list to display", markup)
+			_, err = h.botReq(msg)
 			if err != nil {
-				log.Error("Error sending message", "error", err)
-				return nil, err
+				log.Error("Error sending bot request", "error", err)
+				return nil, fmt.Errorf("error making bot request: %w", err)
 			}
 
 			return c, nil
 		},
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Info("[HANDLER]: Display List Handler 2")
+			log.Info("[HANDLER]: Display List Handler 3")
 
 			var c DisplayListHandlerContext
 			err := json.Unmarshal(context, &c)
@@ -142,37 +164,69 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
 			}
 
-			// TODO: need to finish implementation
 			itemID := ""
 			data := update.CallbackQuery.Data
-			switch data {
+
+			splitData := strings.Split(data, ":")
+
+			// TODO: Posibly refactor, not the happiest with this but ok for now
+			switch splitData[0] {
+			case "del":
+				toDeleteID := splitData[1]
+				log.Info("Deleting", "item", toDeleteID)
+				err := h.deleteItem(toDeleteID)
+				if err != nil {
+					return nil, fmt.Errorf("error deleting item from db: %s, err: %w", toDeleteID, err)
+				}
+
+				itemIndex := -1
+				for index, i := range c.Items {
+					if i.ID == toDeleteID {
+						itemIndex = index
+					}
+				}
+
+				if itemIndex == -1 {
+					log.Error("Error could not find itemIndex")
+					return nil, fmt.Errorf("could not find item ID: %s", itemID)
+				}
+
+				c.Items = append(c.Items[:itemIndex], c.Items[itemIndex+1:]...)
 			case "edit":
+				c.ItemsKeyboardEditable = !c.ItemsKeyboardEditable
+				log.Info("setting editable", "editable", c.ItemsKeyboardEditable)
 			case "done":
+				deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
+				_, err = h.botReq(deleteMsg)
+				if err != nil {
+					log.Error("Error deleting inline keyboard", "error", err)
+					return nil, fmt.Errorf("error making bot request: %w", err)
+				}
 				return nil, JourneryExitErr
 			default:
 				itemID = data
-			}
 
-			itemIndex := -1
-			for index, i := range c.Items {
-				if i.ID == itemID {
-					itemIndex = index
+				itemIndex := -1
+				for index, i := range c.Items {
+					if i.ID == itemID {
+						itemIndex = index
+					}
 				}
-			}
 
-			if itemIndex == -1 {
-				log.Error("Error could not find itemIndex")
-				return nil, fmt.Errorf("could not find item ID: %s", itemID)
-			}
+				if itemIndex == -1 {
+					log.Error("Error could not find itemIndex")
+					return nil, fmt.Errorf("could not find item ID: %s", itemID)
+				}
 
-			err = h.toggleItemPurchase(c.Items[itemIndex].ID)
-			if err != nil {
-				log.Error("Error toggling item purchace", "error", err)
-				return nil, fmt.Errorf("error toggling item purchace in db id: %s, err: %w", c.Items[itemIndex].ID, err)
+				err = h.toggleItemPurchase(c.Items[itemIndex].ID)
+				if err != nil {
+					log.Error("Error toggling item purchace", "error", err)
+					return nil, fmt.Errorf("error toggling item purchace in db id: %s, err: %w", c.Items[itemIndex].ID, err)
+				}
+				// NOTE: on a technical level this could present a race condition since it does not display db values
+				// but since this can only be modified on one chat then should be fine
+				c.Items[itemIndex].Purchased = !c.Items[itemIndex].Purchased
 			}
-			// NOTE: on a technical level this could present a race condition since it does not display db values
-			// but since this can only be modified on one chat then should be fine
-			c.Items[itemIndex].Purchased = !c.Items[itemIndex].Purchased
 
 			markup := buildItemsKeyboard(c)
 			msg := tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, markup)
@@ -197,13 +251,15 @@ func buildItemsKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMark
 		}
 		text += i.ItemText
 
-		kbRows = append(
-			kbRows,
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData(text, i.ID),
-			),
+		row := tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(text, i.ID),
 		)
-		// TODO: need to make another bottom KB row in order to allow the user to exit or modify the list
+
+		if c.ItemsKeyboardEditable {
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData("❌", "del:"+i.ID))
+		}
+
+		kbRows = append(kbRows, row)
 	}
 
 	kbRows = append(

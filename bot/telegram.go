@@ -12,8 +12,6 @@ func StartBot(token string, telegramWebHookURL string, debug bool, db *db.DB) er
 	var err error
 	var updates tgbotapi.UpdatesChannel
 
-	// TODO: implement webhooks for prod
-
 	bot, err = tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return err

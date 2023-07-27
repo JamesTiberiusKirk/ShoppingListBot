@@ -14,8 +14,6 @@ var (
 	// TODO: Maybe think of making some error which would posibly just skip direclty to next handler?
 )
 
-// TODO: finish cleaning up the interfave by remiing previous
-// can just keep previous in the handler's struct if needed
 type HandlerFunc func(context []byte, update tgbotapi.Update) (interface{}, error)
 type HandlerInterface interface {
 	// GetHandlerJourney returns handler funcs jouneys and weather or not the final elment in the array is to be called endlesly
@@ -49,6 +47,6 @@ func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *db.DB) map[string]HandlerInt
 		"newlist":  NewNewListHandler(bot.Send, db.NewShoppingList, db.CheckIfChatExists),
 		"additems": NewAddItemsHandler(bot.Send, db.GetListsByChat, db.AddItemsToList),
 		"displaylist": NewDisplayListHandler(bot.Send, bot.Request, db.GetListsByChat,
-			db.GetItemsByList, db.ToggleItemPurchase, db.CheckIfChatExists),
+			db.GetItemsByList, db.ToggleItemPurchase, db.CheckIfChatExists, db.DeleteItem),
 	}
 }

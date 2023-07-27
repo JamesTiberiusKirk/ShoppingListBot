@@ -59,7 +59,24 @@ func (d *DB) ToggleItemPurchase(itemID string) error {
 
 	_, err := d.db.Exec(query.Query, itemID)
 	if err != nil {
-		return fmt.Errorf("error updating toggle_item_purchase table: %w", err)
+		return fmt.Errorf("error updating items table: %w", err)
+	}
+
+	return nil
+}
+
+func (d *DB) DeleteItem(itemID string) error {
+	log.Info("[DB] deleting item:", "itemID", itemID)
+
+	qName := "delete_item"
+	query, ok := d.queries[qName]
+	if !ok {
+		return fmt.Errorf("query missing %s", qName)
+	}
+
+	_, err := d.db.Exec(query.Query, itemID)
+	if err != nil {
+		return fmt.Errorf("error deleting from items table: %w", err)
 	}
 
 	return nil
