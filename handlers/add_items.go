@@ -11,20 +11,23 @@ import (
 )
 
 type AddItemsHandler struct {
-	sendMsg  func(c tgbotapi.Chattable) (tgbotapi.Message, error)
-	getLists func(chatID int64) ([]types.ShoppingList, error)
-	addItems func(listID string, itemText []string) error
+	sendMsg           func(c tgbotapi.Chattable) (tgbotapi.Message, error)
+	getLists          func(chatID int64) ([]types.ShoppingList, error)
+	addItems          func(listID string, itemText []string) error
+	checkRegistration func(chatID int64) (bool, error)
 }
 
 func NewAddItemsHandler(
 	msgSener func(c tgbotapi.Chattable) (tgbotapi.Message, error),
 	getLists func(chatID int64) ([]types.ShoppingList, error),
 	addItems func(listID string, itemText []string) error,
+	checkRegistration func(chatID int64) (bool, error),
 ) *AddItemsHandler {
 	return &AddItemsHandler{
-		sendMsg:  msgSener,
-		getLists: getLists,
-		addItems: addItems,
+		sendMsg:           msgSener,
+		getLists:          getLists,
+		addItems:          addItems,
+		checkRegistration: checkRegistration,
 	}
 }
 
@@ -36,50 +39,51 @@ type AddItemsHandlerContext struct {
 
 func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	return []HandlerFunc{
-		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Info("[HANDLER]: Add Items Handler")
+		chatRegistered(h.sendMsg, h.checkRegistration,
+			func(context []byte, update tgbotapi.Update) (interface{}, error) {
+				log.Info("[HANDLER]: Add Items Handler")
 
-			chatID, _ := getChatID(update)
-			lists, err := h.getLists(update.Message.Chat.ID)
-			if err != nil {
-				log.Error("Error getting lists from db", "error", err)
-				return nil, err
-			}
+				chatID, _ := getChatID(update)
+				lists, err := h.getLists(update.Message.Chat.ID)
+				if err != nil {
+					log.Error("Error getting lists from db", "error", err)
+					return nil, err
+				}
 
-			if len(lists) < 1 {
-				msg := tgbotapi.NewMessage(chatID, "There are no lists")
+				if len(lists) < 1 {
+					msg := tgbotapi.NewMessage(chatID, "There are no lists")
+					_, err = h.sendMsg(msg)
+					if err != nil {
+						log.Error("Error sending message", "error", err)
+						return nil, err
+					}
+					return nil, JourneryExitErr
+				}
+
+				c := AddItemsHandlerContext{}
+
+				kbRows := [][]tgbotapi.InlineKeyboardButton{}
+				c.ShoppingListsMap = map[string]types.ShoppingList{}
+				for _, l := range lists {
+					kbRows = append(
+						kbRows,
+						tgbotapi.NewInlineKeyboardRow(
+							tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
+						),
+					)
+					c.ShoppingListsMap[l.ID] = l
+				}
+
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please chose the list to add items to")
+				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
 				_, err = h.sendMsg(msg)
 				if err != nil {
 					log.Error("Error sending message", "error", err)
 					return nil, err
 				}
-				return nil, JourneryExitErr
-			}
 
-			c := AddItemsHandlerContext{}
-
-			kbRows := [][]tgbotapi.InlineKeyboardButton{}
-			c.ShoppingListsMap = map[string]types.ShoppingList{}
-			for _, l := range lists {
-				kbRows = append(
-					kbRows,
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
-					),
-				)
-				c.ShoppingListsMap[l.ID] = l
-			}
-
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please chose the list to add items to")
-			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
-			_, err = h.sendMsg(msg)
-			if err != nil {
-				log.Error("Error sending message", "error", err)
-				return nil, err
-			}
-
-			return c, nil
-		},
+				return c, nil
+			}),
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
 			log.Info("[HANDLER]: Add Items Handler 2")
 			chatID := update.CallbackQuery.Message.Chat.ID
@@ -128,7 +132,6 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			}
 
 			if strings.ToUpper(message.Text) == "DONE" {
-				log.Info("[HANDLER]:", "Items", c.Items)
 				err := h.addItems(c.ShoppingList.ID, c.Items)
 				if err != nil {
 					log.Error("Error adding items to db", "error", err)

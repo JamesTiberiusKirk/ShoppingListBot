@@ -45,7 +45,7 @@ func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *db.DB) map[string]HandlerInt
 	return map[string]HandlerInterface{
 		"start":    NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
 		"newlist":  NewNewListHandler(bot.Send, db.NewShoppingList, db.CheckIfChatExists),
-		"additems": NewAddItemsHandler(bot.Send, db.GetListsByChat, db.AddItemsToList),
+		"additems": NewAddItemsHandler(bot.Send, db.GetListsByChat, db.AddItemsToList, db.CheckIfChatExists),
 		"displaylist": NewDisplayListHandler(bot.Send, bot.Request, db.GetListsByChat,
 			db.GetItemsByList, db.ToggleItemPurchase, db.CheckIfChatExists, db.DeleteItem),
 	}

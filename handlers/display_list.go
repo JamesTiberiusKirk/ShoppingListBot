@@ -52,6 +52,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 		chatRegistered(h.sendMsg, h.checkRegistration,
 			func(context []byte, update tgbotapi.Update) (interface{}, error) {
 				log.Info("[HANDLER]: Display List Handler")
+				log.Error("[HANDLER ERROR TEST]: TESTING ERR OUT", "error", fmt.Errorf("this is a test error to be printed out in strerr"))
 
 				lists, err := h.getLists(update.Message.Chat.ID)
 				if err != nil {
@@ -206,8 +207,6 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 					log.Error("Error toggling item purchace", "error", err)
 					return nil, fmt.Errorf("error toggling item purchace in db id: %s, err: %w", c.Items[itemIndex].ID, err)
 				}
-				// NOTE: on a technical level this could present a race condition since it does not display db values
-				// but since this can only be modified on one chat then should be fine
 				c.Items[itemIndex].Purchased = !c.Items[itemIndex].Purchased
 			}
 
@@ -229,7 +228,6 @@ func buildItemsKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMark
 	for _, i := range c.Items {
 		text := ""
 		if i.Purchased {
-			log.Info("PURCHASED")
 			text += "✅ "
 		}
 		text += i.ItemText
