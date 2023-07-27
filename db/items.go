@@ -32,18 +32,23 @@ func (d *DB) AddItemsToList(listID string, itemsText []string) error {
 	return nil
 }
 
-func (d *DB) GetItemsByList(listID string) ([]types.ShoppingListItem, error) {
+func (d *DB) GetItemsByList(listID string, showPurchased bool) ([]types.ShoppingListItem, error) {
 	log.Info("[DB] quering shopping_list_items table for chat:", "listID", listID)
 
-	query, ok := d.queries["get_items_in_list"]
+	qName := "get_unpurchased_items_in_list"
+	if showPurchased {
+		qName = "get_items_in_list"
+	}
+
+	query, ok := d.queries[qName]
 	if !ok {
-		return nil, fmt.Errorf("query missing get_items_in_list")
+		return nil, fmt.Errorf("query missing %s", qName)
 	}
 
 	var shoppingListItems []types.ShoppingListItem
 	err := d.db.Select(&shoppingListItems, query.Query, listID)
 	if err != nil {
-		return nil, fmt.Errorf("error quering shopping_list_items table: %w", err)
+		return nil, fmt.Errorf("error qName: %s, quering shopping_list_items table: %w", qName, err)
 	}
 
 	return shoppingListItems, nil

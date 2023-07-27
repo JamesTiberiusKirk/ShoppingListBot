@@ -14,7 +14,7 @@ type DisplayListHandler struct {
 	sendMsg            func(c tgbotapi.Chattable) (tgbotapi.Message, error)
 	botReq             func(c tgbotapi.Chattable) (*tgbotapi.APIResponse, error)
 	getLists           func(chatID int64) ([]types.ShoppingList, error)
-	getItems           func(listID string) ([]types.ShoppingListItem, error)
+	getItems           func(listID string, togglePurchased bool) ([]types.ShoppingListItem, error)
 	toggleItemPurchase func(itemID string) error
 	checkRegistration  func(chatID int64) (bool, error)
 	deleteItem         func(itemID string) error
@@ -24,7 +24,7 @@ func NewDisplayListHandler(
 	msgSener func(c tgbotapi.Chattable) (tgbotapi.Message, error),
 	botReq func(c tgbotapi.Chattable) (*tgbotapi.APIResponse, error),
 	getLists func(chatID int64) ([]types.ShoppingList, error),
-	getItems func(listID string) ([]types.ShoppingListItem, error),
+	getItems func(listID string, togglePurchased bool) ([]types.ShoppingListItem, error),
 	toggleItemPurchase func(itemID string) error,
 	checkRegistration func(chatID int64) (bool, error),
 	deleteItem func(itemID string) error,
@@ -45,6 +45,7 @@ type DisplayListHandlerContext struct {
 	ShoppingList          types.ShoppingList
 	Items                 []types.ShoppingListItem
 	ItemsKeyboardEditable bool
+	ShowPurchasedItems    bool
 }
 
 func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
@@ -68,8 +69,9 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				}
 
 				c := DisplayListHandlerContext{
-					ShoppingListsMap: map[string]types.ShoppingList{},
-					Items:            []types.ShoppingListItem{},
+					ShoppingListsMap:   map[string]types.ShoppingList{},
+					Items:              []types.ShoppingListItem{},
+					ShowPurchasedItems: false,
 				}
 
 				kbRows := [][]tgbotapi.InlineKeyboardButton{}
@@ -92,6 +94,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 					return nil, err
 				}
 
+				fmt.Printf("CONTEXT %+v\n", c)
 				return c, nil
 			}),
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
@@ -107,7 +110,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			listID := update.CallbackQuery.Data
 			c.ShoppingList = c.ShoppingListsMap[listID]
 
-			items, err := h.getItems(listID)
+			items, err := h.getItems(listID, c.ShowPurchasedItems)
 			if err != nil {
 				log.Error("Error getting items", "error", err)
 				return nil, fmt.Errorf("error getting items from db: %w", err)
@@ -175,6 +178,16 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				}
 
 				c.Items = append(c.Items[:itemIndex], c.Items[itemIndex+1:]...)
+			case "togglePurchased":
+				c.ShowPurchasedItems = !c.ShowPurchasedItems
+				fmt.Printf("%+v", c)
+				items, err := h.getItems(c.ShoppingList.ID, c.ShowPurchasedItems)
+				if err != nil {
+					log.Error("Error getting items", "error", err)
+					return nil, fmt.Errorf("error getting items from db: %w", err)
+				}
+
+				c.Items = items
 			case "edit":
 				c.ItemsKeyboardEditable = !c.ItemsKeyboardEditable
 				log.Info("setting editable", "editable", c.ItemsKeyboardEditable)
@@ -245,8 +258,11 @@ func buildItemsKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMark
 	kbRows = append(
 		kbRows,
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Done", "done"),
+			tgbotapi.NewInlineKeyboardButtonData("Show Purchased", "togglePurchased"),
 			tgbotapi.NewInlineKeyboardButtonData("Edit", "edit"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Done", "done"),
 		),
 	)
 

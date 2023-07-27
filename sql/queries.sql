@@ -1,8 +1,13 @@
+-- CHATS --
+
 -- name: add_chat
 INSERT INTO chats (telegram_chat_id) VALUES ($1);
 
 -- name: get_chat
 SELECT * FROM chats WHERE telegram_chat_id = $1;
+
+
+-- LISTS --
 
 -- name: add_list
 INSERT INTO shopping_lists (
@@ -26,12 +31,18 @@ SELECT *
 FROM shopping_lists
 WHERE id = $1 LIMIT 1;
 
+
+-- ITEMS --
+
 -- name: add_items
 INSERT INTO shopping_list_items (shopping_list_id, item_text, purchased)
 VALUES (:list_id, :text, FALSE)
 
 -- name: get_items_in_list
-SELECT * FROM shopping_list_items WHERE shopping_list_id = $1;
+SELECT * FROM shopping_list_items WHERE shopping_list_id = $1 ORDER BY id;
+
+-- name: get_unpurchased_items_in_list
+SELECT * FROM shopping_list_items WHERE shopping_list_id = $1 AND purchased = FALSE ORDER BY id;
 
 -- name: toggle_item_purchase
 UPDATE shopping_list_items SET purchased = NOT purchased WHERE id = $1;
