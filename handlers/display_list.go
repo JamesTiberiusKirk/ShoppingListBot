@@ -52,7 +52,6 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 		chatRegistered(h.sendMsg, h.checkRegistration,
 			func(context []byte, update tgbotapi.Update) (interface{}, error) {
 				log.Info("[HANDLER]: Display List Handler")
-				log.Error("[HANDLER ERROR TEST]: TESTING ERR OUT", "error", fmt.Errorf("this is a test error to be printed out in strerr"))
 
 				lists, err := h.getLists(update.Message.Chat.ID)
 				if err != nil {
