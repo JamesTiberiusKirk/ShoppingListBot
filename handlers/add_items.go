@@ -12,6 +12,7 @@ import (
 
 type AddItemsHandler struct {
 	sendMsg           func(c tgbotapi.Chattable) (tgbotapi.Message, error)
+	botReq            func(c tgbotapi.Chattable) (*tgbotapi.APIResponse, error)
 	getLists          func(chatID int64) ([]types.ShoppingList, error)
 	addItems          func(listID string, itemText []string) error
 	checkRegistration func(chatID int64) (bool, error)
@@ -19,12 +20,14 @@ type AddItemsHandler struct {
 
 func NewAddItemsHandler(
 	msgSener func(c tgbotapi.Chattable) (tgbotapi.Message, error),
+	botReq func(c tgbotapi.Chattable) (*tgbotapi.APIResponse, error),
 	getLists func(chatID int64) ([]types.ShoppingList, error),
 	addItems func(listID string, itemText []string) error,
 	checkRegistration func(chatID int64) (bool, error),
 ) *AddItemsHandler {
 	return &AddItemsHandler{
 		sendMsg:           msgSener,
+		botReq:            botReq,
 		getLists:          getLists,
 		addItems:          addItems,
 		checkRegistration: checkRegistration,
@@ -35,6 +38,7 @@ type AddItemsHandlerContext struct {
 	ShoppingListsMap map[string]types.ShoppingList
 	ShoppingList     types.ShoppingList
 	Items            []string
+	ListEditable     bool
 }
 
 func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
@@ -60,22 +64,16 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 					return nil, JourneryExitErr
 				}
 
-				c := AddItemsHandlerContext{}
+				c := AddItemsHandlerContext{
+					ShoppingListsMap: map[string]types.ShoppingList{},
+				}
 
-				kbRows := [][]tgbotapi.InlineKeyboardButton{}
-				c.ShoppingListsMap = map[string]types.ShoppingList{}
 				for _, l := range lists {
-					kbRows = append(
-						kbRows,
-						tgbotapi.NewInlineKeyboardRow(
-							tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
-						),
-					)
 					c.ShoppingListsMap[l.ID] = l
 				}
 
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please chose the list to add items to")
-				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
+				msg.ReplyMarkup = h.builldListsKeyboard(c)
 				_, err = h.sendMsg(msg)
 				if err != nil {
 					log.Error("Error sending message", "error", err)
@@ -132,13 +130,17 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			}
 
 			if strings.ToUpper(message.Text) == "DONE" {
+				if len(c.Items) == 0 {
+					return nil, JourneryExitErr
+				}
+
 				err := h.addItems(c.ShoppingList.ID, c.Items)
 				if err != nil {
 					log.Error("Error adding items to db", "error", err)
 					return nil, fmt.Errorf("error inserting items into list %s, %w", c.ShoppingList.ID, err)
 				}
 
-				// TODO: smth is broken here
+				// TODO: smth is broken here with the commas
 				textMessage := "Adding items: "
 				for i, item := range c.Items {
 					if i >= len(c.Items)-1 || i == 0 {
@@ -163,4 +165,39 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 			return c, nil
 		},
 	}, true
+}
+
+func (h AddItemsHandler) builldListsKeyboard(c AddItemsHandlerContext) tgbotapi.InlineKeyboardMarkup {
+	kbRows := [][]tgbotapi.InlineKeyboardButton{}
+	for _, l := range c.ShoppingListsMap {
+
+		row := tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
+		)
+
+		if c.ListEditable {
+			row = append(row,
+				tgbotapi.NewInlineKeyboardButtonData("❌", "del:"+l.ID),
+				tgbotapi.NewInlineKeyboardButtonData("✏️", "change_name:"+l.ID),
+			)
+
+		}
+
+		kbRows = append(
+			kbRows,
+			row,
+		)
+
+	}
+
+	// TODO: Implement
+	// kbRows = append(
+	// 	kbRows,
+	// 	tgbotapi.NewInlineKeyboardRow(
+	// 		tgbotapi.NewInlineKeyboardButtonData("Close", "close"),
+	// 		tgbotapi.NewInlineKeyboardButtonData("Edit", "edit"),
+	// 	),
+	// )
+
+	return tgbotapi.NewInlineKeyboardMarkup(kbRows...)
 }
