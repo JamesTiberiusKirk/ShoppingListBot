@@ -38,6 +38,10 @@ func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 			Command:     "displaylist",
 			Description: "Display shopping list",
 		},
+		tgbotapi.BotCommand{
+			Command:     "editlists",
+			Description: "Display and edit lists",
+		},
 	)
 }
 
@@ -48,5 +52,7 @@ func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *db.DB) map[string]HandlerInt
 		"additems": NewAddItemsHandler(bot.Send, bot.Request, db.GetListsByChat, db.AddItemsToList, db.CheckIfChatExists),
 		"displaylist": NewDisplayListHandler(bot.Send, bot.Request, db.GetListsByChat,
 			db.GetItemsByList, db.ToggleItemPurchase, db.CheckIfChatExists, db.DeleteItem),
+		"editlists": NewEditListsHandler(bot.Send, bot.Request, db.GetListsByChat,
+			db.GetItemsByList, db.CheckIfChatExists, db.DeleteListByID),
 	}
 }

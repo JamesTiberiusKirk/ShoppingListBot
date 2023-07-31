@@ -31,6 +31,12 @@ SELECT *
 FROM shopping_lists
 WHERE id = $1 LIMIT 1;
 
+-- name: delete_list_by_id
+DELETE FROM shopping_lists
+WHERE id = $1;
+
+
+
 
 -- ITEMS --
 

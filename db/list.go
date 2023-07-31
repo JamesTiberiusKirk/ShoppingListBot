@@ -59,3 +59,20 @@ func (d *DB) GetListsByChat(chatID int64) ([]types.ShoppingList, error) {
 
 	return shoppingLists, nil
 }
+
+func (d *DB) DeleteListByID(id string) error {
+	qName := "delete_list_by_id"
+	log.Info("[DB]: delete to shopping_lists", "query_name", qName, "id", id)
+
+	addListQuery, ok := d.queries[qName]
+	if !ok {
+		return fmt.Errorf("query missing get_list_by_id")
+	}
+
+	_, err := d.db.Query(addListQuery.Query, id)
+	if err != nil {
+		return fmt.Errorf("error deleting from shopping_lists table: %w", err)
+	}
+
+	return nil
+}

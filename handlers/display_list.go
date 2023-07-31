@@ -94,7 +94,6 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 					return nil, err
 				}
 
-				fmt.Printf("CONTEXT %+v\n", c)
 				return c, nil
 			}),
 		func(context []byte, update tgbotapi.Update) (interface{}, error) {
@@ -130,7 +129,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				c.Items = append(c.Items, i)
 			}
 
-			markup := buildItemsKeyboard(c)
+			markup := h.buildItemsKeyboard(c)
 			msg := tgbotapi.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "Please chose the list to display", markup)
 			_, err = h.botReq(msg)
 			if err != nil {
@@ -222,7 +221,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				c.Items[itemIndex].Purchased = !c.Items[itemIndex].Purchased
 			}
 
-			markup := buildItemsKeyboard(c)
+			markup := h.buildItemsKeyboard(c)
 			msg := tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, markup)
 			_, err = h.botReq(msg)
 			if err != nil {
@@ -235,7 +234,7 @@ func (h *DisplayListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 	}, true
 }
 
-func buildItemsKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMarkup {
+func (h *DisplayListHandler) buildItemsKeyboard(c DisplayListHandlerContext) tgbotapi.InlineKeyboardMarkup {
 	kbRows := [][]tgbotapi.InlineKeyboardButton{}
 	for _, i := range c.Items {
 		text := ""
