@@ -1,24 +1,10 @@
 package handlers
 
 import (
-	"errors"
-
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
+	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
-
-var (
-	JourneryExitErr           = errors.New("exiting journery")
-	CouldNotExteactContextErr = errors.New("could not extract context")
-	UserErr                   = errors.New("user error")
-	// TODO: Maybe think of making some error which would posibly just skip direclty to next handler?
-)
-
-type HandlerFunc func(context []byte, update tgbotapi.Update) (interface{}, error)
-type HandlerInterface interface {
-	// GetHandlerJourney returns handler funcs jouneys and weather or not the final elment in the array is to be called endlesly
-	GetHandlerJourney() ([]HandlerFunc, bool)
-}
 
 func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 	return tgbotapi.NewSetMyCommands(
@@ -45,8 +31,8 @@ func GetHandlerCommandList() tgbotapi.SetMyCommandsConfig {
 	)
 }
 
-func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *db.DB) map[string]HandlerInterface {
-	return map[string]HandlerInterface{
+func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *db.DB) map[string]tgf.HandlerInterface {
+	return map[string]tgf.HandlerInterface{
 		"start":    NewStartHandler(bot.Send, db.AddNewChat, db.CheckIfChatExists),
 		"newlist":  NewNewListHandler(bot.Send, db.NewShoppingList, db.CheckIfChatExists),
 		"additems": NewAddItemsHandler(bot.Send, bot.Request, db.GetListsByChat, db.AddItemsToList, db.CheckIfChatExists),
@@ -55,4 +41,49 @@ func NewHandlerJounreyMap(bot *tgbotapi.BotAPI, db *db.DB) map[string]HandlerInt
 		"editlists": NewEditListsHandler(bot.Send, bot.Request, db.GetListsByChat,
 			db.GetItemsByList, db.CheckIfChatExists, db.DeleteListByID),
 	}
+}
+
+type DBJourneyStore struct {
+	db *db.DB
+}
+
+func NewDBJourneyStore(db *db.DB) *DBJourneyStore {
+	return &DBJourneyStore{
+		db: db,
+	}
+}
+
+func (js *DBJourneyStore) GetJourneyByChatID(chatID int64) (*tgf.Journey, error) {
+	j, err := js.db.GetJourneyByChat(chatID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tgf.Journey{
+		ID:             j.ID,
+		TelegramChatID: j.TelegramChatID,
+		ChatID:         j.ChatID,
+		Command:        j.Command,
+		Next:           j.Next,
+		RawContext:     j.RawContext,
+	}, nil
+}
+func (js *DBJourneyStore) CleanupChatJourney(chatID int64) error {
+	return js.db.CleanupChatJourney(chatID)
+}
+
+func (js *DBJourneyStore) UpsertJourneyByTelegeramChatID(chatID int64, upsert tgf.Journey) (*tgf.Journey, error) {
+	upsertedJourney, err := js.db.UpsertJourneyByTelegeramChatID(chatID, upsert.Command, upsert.Next, upsert.RawContext)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tgf.Journey{
+		ID:             upsertedJourney.ID,
+		TelegramChatID: upsertedJourney.TelegramChatID,
+		ChatID:         upsertedJourney.ChatID,
+		Command:        upsertedJourney.Command,
+		Next:           upsertedJourney.Next,
+		RawContext:     upsertedJourney.RawContext,
+	}, nil
 }

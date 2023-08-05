@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	log "github.com/inconshreveable/log15"
 )
 
 type AddItemsHandler struct {
@@ -41,27 +41,29 @@ type AddItemsHandlerContext struct {
 	ListEditable     bool
 }
 
-func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
-	return []HandlerFunc{
+func (h *AddItemsHandler) GetHandlerJourney() []tgf.HandlerFunc {
+	return []tgf.HandlerFunc{
 		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(context []byte, update tgbotapi.Update) (interface{}, error) {
-				log.Info("[HANDLER]: Add Items Handler")
+			func(ctx *tgf.Context) error {
+				ctx.Log.Info("[HANDLER]: Add Items Handler")
 
-				chatID, _ := getChatID(update)
-				lists, err := h.getLists(update.Message.Chat.ID)
+				chatID := ctx.GetChatID()
+				lists, err := h.getLists(chatID)
 				if err != nil {
-					log.Error("Error getting lists from db", "error", err)
-					return nil, err
+					ctx.Log.Error("Error getting lists from db", "error", err)
+					return err
 				}
 
 				if len(lists) < 1 {
 					msg := tgbotapi.NewMessage(chatID, "There are no lists")
 					_, err = h.sendMsg(msg)
 					if err != nil {
-						log.Error("Error sending message", "error", err)
-						return nil, err
+						ctx.Log.Error("Error sending message", "error", err)
+						return err
 					}
-					return nil, JourneryExitErr
+
+					ctx.Exit()
+					return nil
 				}
 
 				c := AddItemsHandlerContext{
@@ -72,26 +74,26 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 					c.ShoppingListsMap[l.ID] = l
 				}
 
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please chose the list to add items to")
+				msg := tgbotapi.NewMessage(chatID, "Please chose the list to add items to")
 				msg.ReplyMarkup = h.builldListsKeyboard(c)
 				_, err = h.sendMsg(msg)
 				if err != nil {
-					log.Error("Error sending message", "error", err)
-					return nil, err
+					ctx.Log.Error("Error sending message %w", err)
+					return err
 				}
 
-				return c, nil
+				return ctx.SetContexData(c)
 			}),
-		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Info("[HANDLER]: Add Items Handler 2")
-			chatID := update.CallbackQuery.Message.Chat.ID
-			listID := update.CallbackQuery.Data
+		func(ctx *tgf.Context) error {
+			ctx.Log.Info("[HANDLER]: Add Items Handler 2")
+			chatID := ctx.GetChatID()
+			listID := ctx.Update.CallbackQuery.Data
 
 			var c AddItemsHandlerContext
-			err := json.Unmarshal(context, &c)
+			err := json.Unmarshal(ctx.Journey.RawContext, &c)
 			if err != nil {
-				log.Error("Error unmarshaling context", "error", err)
-				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
+				ctx.Log.Error("Error unmarshaling context", "error", err)
+				return fmt.Errorf("%w: %w", tgf.CouldNotExteactContextErr, err)
 			}
 
 			c.ShoppingList = c.ShoppingListsMap[listID]
@@ -103,41 +105,39 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 
 			_, err = h.sendMsg(msg)
 			if err != nil {
-				log.Error("Error sending message", "error", err)
-				return nil, err
+				ctx.Log.Error("Error sending message", "error", err)
+				return err
 			}
 
-			return c, nil
+			return ctx.SetContexData(c)
 		},
-		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Info("[HANDLER]: Add Items Handler 2")
-			chatID, _ := getChatID(update)
+		func(ctx *tgf.Context) error {
+			ctx.Log.Info("[HANDLER]: Add Items Handler 2")
+			chatID := ctx.GetChatID()
 
-			var message tgbotapi.Message
-			if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
-				message = *update.CallbackQuery.Message
-			} else if update.Message != nil {
-				message = *update.Message
-			} else {
-				return nil, JourneryExitErr
+			message := ctx.GetMessage()
+			if message == nil {
+				ctx.Exit()
+				return nil
 			}
 
 			var c AddItemsHandlerContext
-			err := json.Unmarshal(context, &c)
+			err := json.Unmarshal(ctx.Journey.RawContext, &c)
 			if err != nil {
-				log.Error("Error unmarshaling context", "error", err)
-				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
+				ctx.Log.Error("Error unmarshaling context", "error", err)
+				return fmt.Errorf("%w: %w", tgf.CouldNotExteactContextErr, err)
 			}
 
 			if strings.ToUpper(message.Text) == "DONE" {
 				if len(c.Items) == 0 {
-					return nil, JourneryExitErr
+					ctx.Exit()
+					return nil
 				}
 
 				err := h.addItems(c.ShoppingList.ID, c.Items)
 				if err != nil {
-					log.Error("Error adding items to db", "error", err)
-					return nil, fmt.Errorf("error inserting items into list %s, %w", c.ShoppingList.ID, err)
+					ctx.Log.Error("Error adding items to db: %w", err)
+					return fmt.Errorf("error inserting items into list %s, %w", c.ShoppingList.ID, err)
 				}
 
 				// TODO: smth is broken here with the commas
@@ -154,17 +154,20 @@ func (h *AddItemsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
 				msg := tgbotapi.NewMessage(chatID, textMessage)
 				_, err = h.sendMsg(msg)
 				if err != nil {
-					log.Error("Error sending message", "error", err)
-					return nil, err
+					ctx.Log.Error("Error sending message", "error", err)
+					return err
 				}
 
-				return nil, JourneryExitErr
+				ctx.Exit()
+				return nil
 			}
 
 			c.Items = append(c.Items, message.Text)
-			return c, nil
+
+			ctx.Loop()
+			return ctx.SetContexData(c)
 		},
-	}, true
+	}
 }
 
 func (h AddItemsHandler) builldListsKeyboard(c AddItemsHandlerContext) tgbotapi.InlineKeyboardMarkup {

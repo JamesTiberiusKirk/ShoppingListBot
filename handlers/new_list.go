@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	log "github.com/inconshreveable/log15"
 )
 
 type NewListHandler struct {
@@ -34,80 +34,83 @@ type NewListHandlerContext struct {
 }
 
 // TODO: Refactor this to not use previous then remove previousfrom the entire application
-func (h *NewListHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
-	return []HandlerFunc{
+func (h *NewListHandler) GetHandlerJourney() []tgf.HandlerFunc {
+	return []tgf.HandlerFunc{
 		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(context []byte, update tgbotapi.Update) (interface{}, error) {
-				log.Info("[HANDLER]: New List Handler")
+			func(ctx *tgf.Context) error {
+				ctx.Log.Info("[HANDLER]: New List Handler")
 
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please Chose a name for the list")
+				msg := tgbotapi.NewMessage(ctx.GetChatID(), "Please Chose a name for the list")
 				_, err := h.sendMsg(msg)
 				if err != nil {
-					log.Error("Error sending message", "error", err)
-					return nil, err
+					ctx.Log.Error("Error sending message %w", err)
+					return err
 				}
 
 				c := NewListHandlerContext{}
-
-				return c, nil
+				return ctx.SetContexData(c)
 			},
 		),
-		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Info("[CALLBACK]: New list contextual reply callback with name", "text", update.Message.Text)
+		func(ctx *tgf.Context) error {
+			message := ctx.GetMessage()
+			chatID := ctx.GetChatID()
+			ctx.Log.Info("[HANDLER]: New list contextual reply callback with name %s", message.Text)
 
-			chatID, _ := getChatID(update)
-
-			if update.Message.Text == "" {
-				return nil, JourneryExitErr
+			if message.Text == "" {
+				ctx.Exit()
+				return nil
 			}
 
 			var c NewListHandlerContext
-			err := json.Unmarshal(context, &c)
+			err := json.Unmarshal(ctx.Journey.RawContext, &c)
 			if err != nil {
-				log.Error("Error unmarshaling context", "error", err)
-				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
+				ctx.Log.Error("Error unmarshaling context", "error", err)
+				return fmt.Errorf("%w: %w", tgf.CouldNotExteactContextErr, err)
 			}
 
-			c.Title = update.Message.Text
+			c.Title = message.Text
 			msg := tgbotapi.NewMessage(chatID, "Now, please chose a store")
 			_, err = h.sendMsg(msg)
 			if err != nil {
-				log.Error("Error sending message", "error", err)
-				return nil, err
+				ctx.Log.Error("Error sending message", "error", err)
+				return err
 			}
 
-			return c, nil
+			return ctx.SetContexData(c)
 		},
-		func(context []byte, update tgbotapi.Update) (interface{}, error) {
-			log.Info("[CALLBACK]: New list contextual reply callback 1 with name", "text", update.Message.Text)
+		func(ctx *tgf.Context) error {
+			message := ctx.GetMessage()
 
-			if update.Message.Text == "" {
-				return nil, JourneryExitErr
+			ctx.Log.Info("[HANDLER]: New list contextual reply callback 1 with name", message.Text)
+
+			if message.Text == "" {
+				ctx.Exit()
+				return nil
 			}
 
 			var c NewListHandlerContext
-			err := json.Unmarshal(context, &c)
+			err := json.Unmarshal(ctx.Journey.RawContext, &c)
 			if err != nil {
-				log.Error("Error unmarshaling context", "error", err)
-				return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
+				ctx.Log.Error("Error unmarshaling context", "error", err)
+				return fmt.Errorf("%w: %w", tgf.CouldNotExteactContextErr, err)
 			}
 
-			chatID, _ := getChatID(update)
-			c.Store = update.Message.Text
+			chatID := ctx.GetChatID()
+			c.Store = message.Text
 
 			err = h.addList(chatID, c.Title, c.Store, c.DueDate)
 			if err != nil {
-				log.Error("Error inserting shopping list", "error", err)
-				return nil, fmt.Errorf("error inserting shopping_list: %w", err)
+				ctx.Log.Error("Error inserting shopping list", "error", err)
+				return fmt.Errorf("error inserting shopping_list: %w", err)
 			}
 
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "List created, thank you")
+			msg := tgbotapi.NewMessage(message.Chat.ID, "List created, thank you")
 			_, err = h.sendMsg(msg)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			return c, nil
+			return ctx.SetContexData(c)
 		},
-	}, false
+	}
 }
