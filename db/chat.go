@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
-	log "github.com/inconshreveable/log15"
 )
 
 func (d *DB) AddNewChat(chatID int64) error {
@@ -23,8 +22,6 @@ func (d *DB) AddNewChat(chatID int64) error {
 }
 
 func (d *DB) CheckIfChatExists(chatID int64) (bool, error) {
-	log.Info("[DB] quering chats table for chat", "chatID", chatID)
-
 	query, ok := d.queries["get_chat"]
 	if !ok {
 		return false, fmt.Errorf("query missing get_chat")

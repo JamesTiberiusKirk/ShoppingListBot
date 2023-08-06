@@ -73,8 +73,12 @@ func (ctx *Context) GetMessage() *tgbotapi.Message {
 	return nil
 }
 
-func (ctx *Context) SkipTo(index int) {
+func (ctx *Context) SkipBy(by int) {
 	ctx.nextHasBeenSet = true
+	ctx.skipTo(ctx.Journey.Next + by)
+}
+
+func (ctx *Context) SkipTo(index int) {
 	ctx.skipTo(index)
 }
 

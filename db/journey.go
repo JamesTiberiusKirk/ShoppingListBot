@@ -5,12 +5,10 @@ import (
 	"fmt"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
-	log "github.com/inconshreveable/log15"
 )
 
 func (d *DB) UpsertJourneyByTelegeramChatID(chatID int64, command string, next int, context []byte) (*types.Journey, error) {
 	qName := "upsert_journey_by_telegram_chat_id"
-	log.Info("[DB]: upserting journey", "query_name", qName, "chatID", chatID, "command", command, "next", next)
 	query, ok := d.queries[qName]
 	if !ok {
 		return nil, fmt.Errorf("query missing %s", qName)
@@ -41,7 +39,6 @@ func (d *DB) UpsertJourneyByTelegeramChatID(chatID int64, command string, next i
 
 func (d *DB) GetJourneyByChat(chatID int64) (*types.Journey, error) {
 	qName := "get_chat_journey_by_telegram_chat_id"
-	log.Info("[DB]: get journey by chat", "query_name", qName, "chatID", chatID)
 	query, ok := d.queries[qName]
 	if !ok {
 		return nil, fmt.Errorf("query missing %s", qName)
@@ -58,7 +55,6 @@ func (d *DB) GetJourneyByChat(chatID int64) (*types.Journey, error) {
 
 func (d *DB) CleanupChatJourney(chatID int64) error {
 	qName := "cleanup_chat_journies_by_telegram_chat_id"
-	log.Info("[DB]: cleaning up journey", "query_name", qName, "chatID", chatID)
 	query, ok := d.queries[qName]
 	if !ok {
 		return fmt.Errorf("query missing %s", qName)

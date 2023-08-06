@@ -173,6 +173,7 @@ func (b *Bot) createCallbacks(ctx *Context) {
 
 		ctx.Journey.Next = i
 		b.handleHandlerError(ctx, b.execHandler(ctx))
+		ctx.nextHasBeenSet = false
 	}
 
 	ctx.exit = func() {
@@ -205,7 +206,6 @@ func (b *Bot) handleHandlerError(ctx *Context, err error) {
 		return
 	}
 
-	b.log.Error("[HANDLER ERROR]: trying to cleanup handler journey DB: %w", err)
 	b.log.Debug("[SCHEDULER]: cleaning up index: %s", ctx.Journey.Next)
 	err = b.journeyStore.CleanupChatJourney(ctx.GetChatID())
 	if err != nil {

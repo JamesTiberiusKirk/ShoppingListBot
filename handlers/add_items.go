@@ -43,47 +43,47 @@ type AddItemsHandlerContext struct {
 
 func (h *AddItemsHandler) GetHandlerJourney() []tgf.HandlerFunc {
 	return []tgf.HandlerFunc{
-		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(ctx *tgf.Context) error {
-				ctx.Log.Info("[HANDLER]: Add Items Handler")
+		chatRegistered(h.sendMsg, h.checkRegistration),
+		func(ctx *tgf.Context) error {
+			ctx.Log.Info("[HANDLER]: Add Items Handler")
 
-				chatID := ctx.GetChatID()
-				lists, err := h.getLists(chatID)
-				if err != nil {
-					ctx.Log.Error("Error getting lists from db", "error", err)
-					return err
-				}
+			chatID := ctx.GetChatID()
+			lists, err := h.getLists(chatID)
+			if err != nil {
+				ctx.Log.Error("Error getting lists from db", "error", err)
+				return err
+			}
 
-				if len(lists) < 1 {
-					msg := tgbotapi.NewMessage(chatID, "There are no lists")
-					_, err = h.sendMsg(msg)
-					if err != nil {
-						ctx.Log.Error("Error sending message", "error", err)
-						return err
-					}
-
-					ctx.Exit()
-					return nil
-				}
-
-				c := AddItemsHandlerContext{
-					ShoppingListsMap: map[string]types.ShoppingList{},
-				}
-
-				for _, l := range lists {
-					c.ShoppingListsMap[l.ID] = l
-				}
-
-				msg := tgbotapi.NewMessage(chatID, "Please chose the list to add items to")
-				msg.ReplyMarkup = h.builldListsKeyboard(c)
+			if len(lists) < 1 {
+				msg := tgbotapi.NewMessage(chatID, "There are no lists")
 				_, err = h.sendMsg(msg)
 				if err != nil {
-					ctx.Log.Error("Error sending message %w", err)
+					ctx.Log.Error("Error sending message", "error", err)
 					return err
 				}
 
-				return ctx.SetContexData(c)
-			}),
+				ctx.Exit()
+				return nil
+			}
+
+			c := AddItemsHandlerContext{
+				ShoppingListsMap: map[string]types.ShoppingList{},
+			}
+
+			for _, l := range lists {
+				c.ShoppingListsMap[l.ID] = l
+			}
+
+			msg := tgbotapi.NewMessage(chatID, "Please chose the list to add items to")
+			msg.ReplyMarkup = h.builldListsKeyboard(c)
+			_, err = h.sendMsg(msg)
+			if err != nil {
+				ctx.Log.Error("Error sending message %w", err)
+				return err
+			}
+
+			return ctx.SetContexData(c)
+		},
 		func(ctx *tgf.Context) error {
 			ctx.Log.Info("[HANDLER]: Add Items Handler 2")
 			chatID := ctx.GetChatID()

@@ -5,12 +5,10 @@ import (
 	"time"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
-	log "github.com/inconshreveable/log15"
 )
 
 func (d *DB) NewShoppingList(chatID int64, title string, storeLoc string, dueDate *time.Time) error {
 	qName := "add_list"
-	log.Info("[DB]: inserting to shopping_lists", "query_name", qName, "chatID", chatID, "title", title, "store_loc", storeLoc, "due_date", dueDate)
 	addListQuery, ok := d.queries[qName]
 	if !ok {
 		return fmt.Errorf("query missing add_list")
@@ -26,7 +24,6 @@ func (d *DB) NewShoppingList(chatID int64, title string, storeLoc string, dueDat
 
 func (d *DB) GetListsByID(id int64) (types.ShoppingList, error) {
 	qName := "get_list_by_id"
-	log.Info("[DB]: inserting to shopping_lists", "query_name", qName, "id", id)
 
 	addListQuery, ok := d.queries[qName]
 	if !ok {
@@ -44,8 +41,6 @@ func (d *DB) GetListsByID(id int64) (types.ShoppingList, error) {
 
 func (d *DB) GetListsByChat(chatID int64) ([]types.ShoppingList, error) {
 	qName := "get_lists"
-	log.Info("[DB] quering shopping_lists table for chat", "chatID", chatID)
-
 	addListQuery, ok := d.queries[qName]
 	if !ok {
 		return nil, fmt.Errorf("query missing get_lists")
@@ -62,8 +57,6 @@ func (d *DB) GetListsByChat(chatID int64) ([]types.ShoppingList, error) {
 
 func (d *DB) DeleteListByID(id string) error {
 	qName := "delete_list_by_id"
-	log.Info("[DB]: delete to shopping_lists", "query_name", qName, "id", id)
-
 	addListQuery, ok := d.queries[qName]
 	if !ok {
 		return fmt.Errorf("query missing get_list_by_id")

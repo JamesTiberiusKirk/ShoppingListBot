@@ -4,12 +4,9 @@ import (
 	"fmt"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
-	log "github.com/inconshreveable/log15"
 )
 
 func (d *DB) AddItemsToList(listID string, itemsText []string) error {
-	log.Info("[DB] inserting to shopping_list_items", "listID", listID, "itemsText", itemsText)
-
 	query, ok := d.queries["add_items"]
 	if !ok {
 		return fmt.Errorf("query missing add_items")
@@ -33,8 +30,6 @@ func (d *DB) AddItemsToList(listID string, itemsText []string) error {
 }
 
 func (d *DB) GetItemsByList(listID string, showPurchased bool) ([]types.ShoppingListItem, error) {
-	log.Info("[DB] quering shopping_list_items table for chat:", "listID", listID)
-
 	qName := "get_unpurchased_items_in_list"
 	if showPurchased {
 		qName = "get_items_in_list"
@@ -55,8 +50,6 @@ func (d *DB) GetItemsByList(listID string, showPurchased bool) ([]types.Shopping
 }
 
 func (d *DB) ToggleItemPurchase(itemID string) error {
-	log.Info("[DB] toggling item purchase:", "itemID", itemID)
-
 	query, ok := d.queries["toggle_item_purchase"]
 	if !ok {
 		return fmt.Errorf("query missing toggle_item_purchase")
@@ -71,8 +64,6 @@ func (d *DB) ToggleItemPurchase(itemID string) error {
 }
 
 func (d *DB) DeleteItem(itemID string) error {
-	log.Info("[DB] deleting item:", "itemID", itemID)
-
 	qName := "delete_item"
 	query, ok := d.queries[qName]
 	if !ok {

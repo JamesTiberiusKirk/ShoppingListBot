@@ -50,54 +50,54 @@ type DisplayListHandlerContext struct {
 
 func (h *DisplayListHandler) GetHandlerJourney() []tgf.HandlerFunc {
 	return []tgf.HandlerFunc{
-		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(ctx *tgf.Context) error {
-				ctx.Log.Info("[HANDLER]: Display List Handler")
-				chatID := ctx.GetChatID()
+		chatRegistered(h.sendMsg, h.checkRegistration),
+		func(ctx *tgf.Context) error {
+			ctx.Log.Info("[HANDLER]: Display List Handler")
+			chatID := ctx.GetChatID()
 
-				lists, err := h.getLists(chatID)
-				if err != nil {
-					return err
-				}
+			lists, err := h.getLists(chatID)
+			if err != nil {
+				return err
+			}
 
-				if len(lists) < 1 {
-					msg := tgbotapi.NewMessage(chatID, "There are no lists to chose from")
-					_, err = h.sendMsg(msg)
-					if err != nil {
-						return err
-					}
-					ctx.Exit()
-					return nil
-				}
-
-				c := DisplayListHandlerContext{
-					ShoppingListsMap:   map[string]types.ShoppingList{},
-					Items:              []types.ShoppingListItem{},
-					ShowPurchasedItems: false,
-				}
-
-				kbRows := [][]tgbotapi.InlineKeyboardButton{}
-				c.ShoppingListsMap = map[string]types.ShoppingList{}
-				for _, l := range lists {
-					kbRows = append(
-						kbRows,
-						tgbotapi.NewInlineKeyboardRow(
-							tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
-						),
-					)
-					c.ShoppingListsMap[l.ID] = l
-				}
-
-				msg := tgbotapi.NewMessage(chatID, "Please chose the list to display")
-				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
+			if len(lists) < 1 {
+				msg := tgbotapi.NewMessage(chatID, "There are no lists to chose from")
 				_, err = h.sendMsg(msg)
 				if err != nil {
-					ctx.Log.Error("Error sending message %w", err)
 					return err
 				}
+				ctx.Exit()
+				return nil
+			}
 
-				return ctx.SetContexData(c)
-			}),
+			c := DisplayListHandlerContext{
+				ShoppingListsMap:   map[string]types.ShoppingList{},
+				Items:              []types.ShoppingListItem{},
+				ShowPurchasedItems: false,
+			}
+
+			kbRows := [][]tgbotapi.InlineKeyboardButton{}
+			c.ShoppingListsMap = map[string]types.ShoppingList{}
+			for _, l := range lists {
+				kbRows = append(
+					kbRows,
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s - %s", l.Title, l.StoreLocation), l.ID),
+					),
+				)
+				c.ShoppingListsMap[l.ID] = l
+			}
+
+			msg := tgbotapi.NewMessage(chatID, "Please chose the list to display")
+			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
+			_, err = h.sendMsg(msg)
+			if err != nil {
+				ctx.Log.Error("Error sending message %w", err)
+				return err
+			}
+
+			return ctx.SetContexData(c)
+		},
 		func(ctx *tgf.Context) error {
 			ctx.Log.Info("[HANDLER]: Display List Handler 2")
 

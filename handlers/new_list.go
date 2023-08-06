@@ -36,21 +36,20 @@ type NewListHandlerContext struct {
 // TODO: Refactor this to not use previous then remove previousfrom the entire application
 func (h *NewListHandler) GetHandlerJourney() []tgf.HandlerFunc {
 	return []tgf.HandlerFunc{
-		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(ctx *tgf.Context) error {
-				ctx.Log.Info("[HANDLER]: New List Handler")
+		chatRegistered(h.sendMsg, h.checkRegistration),
+		func(ctx *tgf.Context) error {
+			ctx.Log.Info("[HANDLER]: New List Handler")
 
-				msg := tgbotapi.NewMessage(ctx.GetChatID(), "Please Chose a name for the list")
-				_, err := h.sendMsg(msg)
-				if err != nil {
-					ctx.Log.Error("Error sending message %w", err)
-					return err
-				}
+			msg := tgbotapi.NewMessage(ctx.GetChatID(), "Please Chose a name for the list")
+			_, err := h.sendMsg(msg)
+			if err != nil {
+				ctx.Log.Error("Error sending message %w", err)
+				return err
+			}
 
-				c := NewListHandlerContext{}
-				return ctx.SetContexData(c)
-			},
-		),
+			c := NewListHandlerContext{}
+			return ctx.SetContexData(c)
+		},
 		func(ctx *tgf.Context) error {
 			message := ctx.GetMessage()
 			chatID := ctx.GetChatID()

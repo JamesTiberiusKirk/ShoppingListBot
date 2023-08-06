@@ -3,7 +3,6 @@ package db
 import (
 	"fmt"
 
-	log "github.com/inconshreveable/log15"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/goyesql"
 	_ "github.com/lib/pq"
@@ -34,7 +33,6 @@ func NewDBClient(dbUrl string) (*DB, error) {
 func (d *DB) ApplySchema() error {
 	sq, ok := d.schema["schema"]
 	if !ok {
-		log.Error("schema not found")
 		return fmt.Errorf("schemanot not found")
 	}
 
