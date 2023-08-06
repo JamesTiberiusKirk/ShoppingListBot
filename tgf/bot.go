@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -47,7 +46,7 @@ func (b *Bot) SetLogger(logger Logger) {
 	b.log = logger
 }
 
-func (b *Bot) StartBot(debug bool, db *db.DB) error {
+func (b *Bot) StartBot(debug bool) error {
 	if b.log == nil {
 		b.log = NewDefaultLogger(debug)
 	}
