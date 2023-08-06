@@ -17,9 +17,11 @@ type Context struct {
 	Update tgbotapi.Update
 	// Journey - TGF journey context object will be stored in the journey store.
 	Journey *Journey
-
 	// Log instance of Logger initialised with the update
 	Log Logger
+
+	// This object is meant to be for injecting dependencies
+	// injected map[string]interface{}
 
 	// handleError func(err error)
 	// execHandler func()
@@ -29,6 +31,19 @@ type Context struct {
 	skipTo         func(int)
 	exit           func()
 	changeJourney  func(string, int)
+}
+
+func (ctx *Context) SendMessage(text string) error {
+	return nil
+}
+
+func (ctx *Context) SendRequest() error {
+	return nil
+}
+
+// TODO: See if there is a way to either create a new keyboard or edit it if one exits
+func (ctx *Context) UpsertInlineKeyboard(kb tgbotapi.InlineKeyboardMarkup) error {
+	return nil
 }
 
 // GetChatID - returns chatid from the message with GetMessage(), returns 0 if no message found

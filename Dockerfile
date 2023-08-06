@@ -3,7 +3,7 @@ RUN mkdir /build
 ADD . /build/
 WORKDIR /build 
 RUN go get ./...
-RUN go build -o shopping-list-bot 
+RUN go build -ldflags "-X main.version=production`date -u +.%Y%m%d.%H%M%S`" -o shopping-list-bot 
 
 FROM alpine
 COPY --from=builder /build/shopping-list-bot /app/

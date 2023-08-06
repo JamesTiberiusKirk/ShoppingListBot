@@ -7,6 +7,12 @@ import (
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
 )
 
+var version = "development"
+
+func GetVersion() string {
+	return version
+}
+
 func main() {
 	c := config.GetConfig()
 
@@ -23,7 +29,7 @@ func main() {
 	}
 
 	commands := handlers.GetHandlerCommandList()
-	journeys := handlers.NewHandlerJounreyMap(botAPI, db)
+	journeys := handlers.NewHandlerJounreyMap(botAPI, db, GetVersion)
 
 	bot := tgf.NewBot(botAPI, commands, journeys, nil, js)
 	err = bot.StartBot(false, db)
