@@ -2,14 +2,13 @@ package db
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	log "github.com/inconshreveable/log15"
 )
 
-func (d *DB) UpsertJourneyByTelegeramChatID(chatID int64, command string, next int, context interface{}) (*types.Journey, error) {
+func (d *DB) UpsertJourneyByTelegeramChatID(chatID int64, command string, next int, context []byte) (*types.Journey, error) {
 	qName := "upsert_journey_by_telegram_chat_id"
 	log.Info("[DB]: upserting journey", "query_name", qName, "chatID", chatID, "command", command, "next", next)
 	query, ok := d.queries[qName]
@@ -17,16 +16,11 @@ func (d *DB) UpsertJourneyByTelegeramChatID(chatID int64, command string, next i
 		return nil, fmt.Errorf("query missing %s", qName)
 	}
 
-	contextBytes, err := json.Marshal(context)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling context %d, err: %w", chatID, err)
-	}
-
 	namedExecParams := map[string]interface{}{
 		"telegram_chat_id": chatID,
 		"command":          command,
 		"next":             next,
-		"context":          contextBytes,
+		"context":          context,
 	}
 
 	rows, err := d.db.NamedQuery(query.Query, namedExecParams)

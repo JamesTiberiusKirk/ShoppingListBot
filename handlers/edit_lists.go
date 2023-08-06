@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	log "github.com/inconshreveable/log15"
 )
 
 type EditListsHandler struct {
@@ -42,102 +42,108 @@ type EditListsHandlerContext struct {
 	Items         []types.ShoppingListItem
 }
 
-func (h *EditListsHandler) GetHandlerJourney() ([]HandlerFunc, bool) {
-	return []HandlerFunc{
+func (h *EditListsHandler) GetHandlerJourney() []tgf.HandlerFunc {
+	return []tgf.HandlerFunc{
 		chatRegistered(h.sendMsg, h.checkRegistration,
-			func(context []byte, update tgbotapi.Update) (interface{}, error) {
-				log.Info("[HANDLER]: Display List Handler")
+			func(ctx *tgf.Context) error {
+				ctx.Log.Info("[HANDLER]: Display List Handler")
 
 				c := EditListsHandlerContext{
 					ShoppingLists: []types.ShoppingList{},
 					Items:         []types.ShoppingListItem{},
 				}
 
-				if context != nil {
-					err := json.Unmarshal(context, &c)
+				if ctx.Journey.RawContext != nil {
+					err := json.Unmarshal(ctx.Journey.RawContext, &c)
 					if err != nil {
-						log.Error("Error unmarshaling context", "error", err)
-						return nil, fmt.Errorf("%w: %w", CouldNotExteactContextErr, err)
+						ctx.Log.Error("Error unmarshaling context", "error", err)
+						return fmt.Errorf("%w: %w", tgf.CouldNotExteactContextErr, err)
 					}
 				}
 
-				chatID, _ := getChatID(update)
+				chatID := ctx.GetChatID()
+				message := ctx.GetMessage()
 
 				data := ""
-				if update.CallbackQuery != nil {
-					data = update.CallbackQuery.Data
+				if ctx.Update.CallbackQuery != nil {
+					data = ctx.Update.CallbackQuery.Data
 				}
 
 				switch data {
 				case "delete":
-					log.Info("deleting", "selected_list", c.SelectedList)
+					ctx.Log.Info("deleting", "selected_list", c.SelectedList)
 
 					if c.SelectedList == "" {
-						return nil, nil
+						return nil
 					}
 
 					err := h.deleteList(c.SelectedList)
 					if err != nil {
-						log.Error("Error deleting list", "error", err)
-						return nil, fmt.Errorf("error deleting list from db: %w", err)
+						ctx.Log.Error("Error deleting list", "error", err)
+						return fmt.Errorf("error deleting list from db: %w", err)
 					}
 					lists, err := h.getLists(chatID)
 					if err != nil {
-						return nil, err
+						return err
 					}
 					c.ShoppingLists = lists
 
 				case "done":
-					deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
+					deleteMsg := tgbotapi.NewDeleteMessage(chatID, message.MessageID)
 					_, err := h.botReq(deleteMsg)
 					if err != nil {
-						log.Error("Error deleting inline keyboard", "error", err)
-						return nil, fmt.Errorf("error making bot request: %w", err)
+						ctx.Log.Error("Error deleting inline keyboard", "error", err)
+						return fmt.Errorf("error making bot request: %w", err)
 					}
-					return nil, JourneryExitErr
+					ctx.Exit()
+					return nil
 				default:
-					if data != "" {
+					if data == c.SelectedList {
+						c.SelectedList = ""
+					} else if data != "" {
 						c.SelectedList = data
 					}
 
 					lists, err := h.getLists(chatID)
 					if err != nil {
-						return nil, err
+						return err
 					}
 
 					if len(lists) < 1 {
-						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "There are no lists to chose from")
+						msg := tgbotapi.NewMessage(chatID, "There are no lists to chose from")
 						_, err = h.sendMsg(msg)
 						if err != nil {
-							return nil, err
+							return err
 						}
-						return nil, JourneryExitErr
+						ctx.Exit()
+						return nil
 					}
 					c.ShoppingLists = lists
 				}
 
 				kbRows := h.buildKeyboard(c)
 
-				if update.Message != nil {
+				if ctx.Update.Message != nil {
 					msg := tgbotapi.NewMessage(chatID, "Please chose the list to edit")
 					msg.ReplyMarkup = kbRows
 					_, err := h.sendMsg(msg)
 					if err != nil {
-						log.Error("Error sending message", "error", err)
-						return nil, err
+						ctx.Log.Error("Error sending message %w", err)
+						return err
 					}
 				} else {
-					msg := tgbotapi.NewEditMessageReplyMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, kbRows)
+					msg := tgbotapi.NewEditMessageReplyMarkup(chatID, message.MessageID, kbRows)
 					_, err := h.botReq(msg)
 					if err != nil {
-						log.Error("Error sending bot request", "error", err)
-						return nil, fmt.Errorf("error making bot request: %w", err)
+						ctx.Log.Error("Error sending bot request", "error", err)
+						return fmt.Errorf("error making bot request: %w", err)
 					}
 				}
 
-				return c, nil
+				ctx.Loop()
+				return ctx.SetContexData(c)
 			}),
-	}, true
+	}
 }
 
 func (h *EditListsHandler) buildKeyboard(c EditListsHandlerContext) tgbotapi.InlineKeyboardMarkup {
