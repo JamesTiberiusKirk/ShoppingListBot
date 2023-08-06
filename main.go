@@ -32,7 +32,7 @@ func main() {
 	journeys := handlers.NewHandlerJounreyMap(botAPI, db, GetVersion)
 
 	bot := tgf.NewBot(botAPI, commands, journeys, nil, js)
-	err = bot.StartBot(false, db)
+	err = bot.StartBot(false)
 	if err != nil {
 		panic(err)
 	}
