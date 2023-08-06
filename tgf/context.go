@@ -33,19 +33,6 @@ type Context struct {
 	changeJourney  func(string, int)
 }
 
-func (ctx *Context) SendMessage(text string) error {
-	return nil
-}
-
-func (ctx *Context) SendRequest() error {
-	return nil
-}
-
-// TODO: See if there is a way to either create a new keyboard or edit it if one exits
-func (ctx *Context) UpsertInlineKeyboard(kb tgbotapi.InlineKeyboardMarkup) error {
-	return nil
-}
-
 // GetChatID - returns chatid from the message with GetMessage(), returns 0 if no message found
 func (ctx *Context) GetChatID() int64 {
 	message := ctx.GetMessage()
