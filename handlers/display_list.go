@@ -269,6 +269,9 @@ func (h *DisplayListHandler) buildListsKeyboard(c DisplayListHandlerContext) tgb
 			tgbotapi.NewInlineKeyboardButtonData("Edit", "edit"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Show Purchased", "togglePurchased"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Done", "done"),
 		),
 	)

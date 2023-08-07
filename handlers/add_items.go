@@ -112,7 +112,7 @@ func (h *AddItemsHandler) GetHandlerJourney() []tgf.HandlerFunc {
 			return ctx.SetContexData(c)
 		},
 		func(ctx *tgf.Context) error {
-			ctx.Log.Info("[HANDLER]: Add Items Handler 2")
+			ctx.Log.Info("[HANDLER]: Add Items Handler 3")
 			chatID := ctx.GetChatID()
 
 			message := ctx.GetMessage()
