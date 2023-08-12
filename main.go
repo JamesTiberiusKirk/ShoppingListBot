@@ -16,12 +16,12 @@ func GetVersion() string {
 func main() {
 	c := config.GetConfig()
 
-	db, err := db.NewDBClient(c.DbUrl)
+	dbc, err := db.NewDBClient(c.DbUrl)
 	if err != nil {
 		panic(err)
 	}
 
-	js := handlers.NewDBJourneyStore(db)
+	js := db.NewDBJourneyStore(dbc)
 
 	botAPI, err := tgf.InitBotAPI(c.TelegramToken, c.TelegramWebHookURL, false)
 	if err != nil {
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	commands := handlers.GetHandlerCommandList()
-	journeys := handlers.NewHandlerJounreyMap(botAPI, db, GetVersion)
+	journeys := handlers.NewHandlerJounreyMap(botAPI, dbc, GetVersion)
 
 	bot := tgf.NewBot(botAPI, commands, journeys, nil, js)
 	err = bot.StartBot(false)
