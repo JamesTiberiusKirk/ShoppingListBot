@@ -9,7 +9,7 @@ import (
 )
 
 type DB struct {
-	db      *sqlx.DB
+	DB      *sqlx.DB
 	schema  goyesql.Queries
 	queries goyesql.Queries
 }
@@ -24,7 +24,7 @@ func NewDBClient(dbUrl string) (*DB, error) {
 	queries := goyesql.MustParseFile("./sql/queries.sql")
 
 	return &DB{
-		db:      db,
+		DB:      db,
 		schema:  schema,
 		queries: queries,
 	}, nil
@@ -36,7 +36,7 @@ func (d *DB) ApplySchema() error {
 		return fmt.Errorf("schemanot not found")
 	}
 
-	_, err := d.db.Exec(sq.Query)
+	_, err := d.DB.Exec(sq.Query)
 	if err != nil {
 		return err
 	}

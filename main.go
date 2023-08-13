@@ -23,6 +23,7 @@ func main() {
 
 	js := db.NewDBJourneyStore(dbc)
 
+	// The debug for the tgapi lib is was too verbose so for now just setting debug to false
 	botAPI, err := tgf.InitBotAPI(c.TelegramToken, c.TelegramWebHookURL, false)
 	if err != nil {
 		panic(err)
@@ -32,7 +33,7 @@ func main() {
 	journeys := handlers.NewHandlerJounreyMap(botAPI, dbc, GetVersion)
 
 	bot := tgf.NewBot(botAPI, commands, journeys, nil, js)
-	err = bot.StartBot(false)
+	err = bot.StartBot(c.Debug)
 	if err != nil {
 		panic(err)
 	}

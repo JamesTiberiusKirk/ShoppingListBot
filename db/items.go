@@ -21,7 +21,7 @@ func (d *DB) AddItemsToList(listID string, itemsText []string) error {
 		})
 	}
 
-	_, err := d.db.NamedExec(query.Query, batchInsert)
+	_, err := d.DB.NamedExec(query.Query, batchInsert)
 	if err != nil {
 		return fmt.Errorf("error inserting into shopping_list_items table: %w", err)
 	}
@@ -41,7 +41,7 @@ func (d *DB) GetItemsByList(listID string, showPurchased bool) ([]types.Shopping
 	}
 
 	var shoppingListItems []types.ShoppingListItem
-	err := d.db.Select(&shoppingListItems, query.Query, listID)
+	err := d.DB.Select(&shoppingListItems, query.Query, listID)
 	if err != nil {
 		return nil, fmt.Errorf("error qName: %s, quering shopping_list_items table: %w", qName, err)
 	}
@@ -55,7 +55,7 @@ func (d *DB) ToggleItemPurchase(itemID string) error {
 		return fmt.Errorf("query missing toggle_item_purchase")
 	}
 
-	_, err := d.db.Exec(query.Query, itemID)
+	_, err := d.DB.Exec(query.Query, itemID)
 	if err != nil {
 		return fmt.Errorf("error updating items table: %w", err)
 	}
@@ -70,7 +70,7 @@ func (d *DB) DeleteItem(itemID string) error {
 		return fmt.Errorf("query missing %s", qName)
 	}
 
-	_, err := d.db.Exec(query.Query, itemID)
+	_, err := d.DB.Exec(query.Query, itemID)
 	if err != nil {
 		return fmt.Errorf("error deleting from items table: %w", err)
 	}

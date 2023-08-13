@@ -96,7 +96,7 @@ func (h *DisplayListHandler) GetHandlerJourney() []tgf.HandlerFunc {
 				return err
 			}
 
-			ctx.CleanupMessages = append(ctx.CleanupMessages, sentMessage.MessageID)
+			ctx.Journey.MessagesCleanup = append(ctx.Journey.MessagesCleanup, sentMessage.MessageID)
 			return ctx.SetContexData(c)
 		},
 		func(ctx *tgf.Context) error {

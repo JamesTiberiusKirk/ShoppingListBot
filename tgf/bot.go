@@ -102,7 +102,6 @@ func (b *Bot) handleUpdate(update tgbotapi.Update) {
 		ctx.Journey.Command = c
 		ctx.Journey.Next = 0
 		ctx.Journey.TelegramChatID = chatID
-
 	} else {
 		j, err := b.journeyStore.GetJourneyByChatID(chatID)
 		if err != nil {
@@ -177,9 +176,10 @@ func (b *Bot) createCallbacks(ctx *Context) {
 	}
 
 	ctx.exit = func() {
-		if len(ctx.CleanupMessages) > 0 {
-			b.log.Debug("[CLEANUP]: message(s) to delete: %d", len(ctx.CleanupMessages))
-			for _, messageID := range ctx.CleanupMessages {
+		b.log.Debug("[EXIT]: message(s) to delete: %d", len(ctx.Journey.MessagesCleanup))
+		if len(ctx.Journey.MessagesCleanup) > 0 {
+			b.log.Debug("[CLEANUP]: message(s) to delete: %d", len(ctx.Journey.MessagesCleanup))
+			for _, messageID := range ctx.Journey.MessagesCleanup {
 				deleteMsg := tgbotapi.NewDeleteMessage(ctx.GetChatID(), messageID)
 				_, err := b.bot.Request(deleteMsg)
 				if err != nil {

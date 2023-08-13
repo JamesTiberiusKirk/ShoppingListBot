@@ -37,7 +37,7 @@ func NewDefaultLogger(debug bool) *DefaultLogger {
 
 	infoLogger := log.New(os.Stdout, "INFO: ", flags)
 	warningLogger := log.New(os.Stdout, "WARNING: ", flags)
-	debugLogger := log.New(os.Stdout, "WARNING: ", flags)
+	debugLogger := log.New(os.Stdout, "DEBUG: ", flags)
 	errorLogger := log.New(os.Stderr, "ERROR: ", flags)
 
 	return &DefaultLogger{

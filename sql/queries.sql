@@ -39,7 +39,7 @@ WHERE id = $1;
 
 
 -- ITEMS --
-
+--
 -- name: add_items
 INSERT INTO shopping_list_items (shopping_list_id, item_text, purchased)
 VALUES (:list_id, :text, FALSE)
@@ -60,7 +60,7 @@ DELETE FROM shopping_list_items WHERE id = $1;
 -- JOURNIES --
 
 -- name: upsert_journey_by_telegram_chat_id
-INSERT INTO chat_journies (chat_id, command, next, context, created_at, updated_at)
+INSERT INTO chat_journies (chat_id, command, next, context, messages_cleanup, created_at, updated_at)
 VALUES (
     (
         SELECT id FROM chats WHERE telegram_chat_id = :telegram_chat_id
@@ -68,6 +68,7 @@ VALUES (
     :command,
     :next,
     :context,
+    :messages_cleanup,
     (
         SELECT CURRENT_TIMESTAMP
     ),

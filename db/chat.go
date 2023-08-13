@@ -13,7 +13,7 @@ func (d *DB) AddNewChat(chatID int64) error {
 		return fmt.Errorf("query missing add_chat")
 	}
 
-	_, err := d.db.Exec(addChatSQL.Query, chatID)
+	_, err := d.DB.Exec(addChatSQL.Query, chatID)
 	if err != nil {
 		return fmt.Errorf("error inserting into chats %d", chatID)
 	}
@@ -28,7 +28,7 @@ func (d *DB) CheckIfChatExists(chatID int64) (bool, error) {
 	}
 
 	var chat types.Chat
-	err := d.db.QueryRowx(query.Query, chatID).StructScan(&chat)
+	err := d.DB.QueryRowx(query.Query, chatID).StructScan(&chat)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil

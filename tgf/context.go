@@ -19,8 +19,6 @@ type Context struct {
 	Journey *Journey
 	// Log instance of Logger initialised with the update
 	Log Logger
-	// CleanupMessages for cleaning up any messages in the chat on exit
-	CleanupMessages []int
 
 	handlers       []HandlerFunc
 	nextHasBeenSet bool
@@ -28,6 +26,10 @@ type Context struct {
 	exit           func()
 	changeJourney  func(string, int)
 	bot            *tgbotapi.BotAPI
+}
+
+func (ctx *Context) AddMsgToCleanup(messageID int) {
+	ctx.Journey.MessagesCleanup = append(ctx.Journey.MessagesCleanup, messageID)
 }
 
 // GetChatID - returns chatid from the message with GetMessage(), returns 0 if no message found

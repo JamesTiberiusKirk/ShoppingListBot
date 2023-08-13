@@ -26,5 +26,11 @@ CREATE TABLE IF NOT EXISTS chat_journies (
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     context JSONB,
+    messages_cleanup INTEGER[]
     FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS migrations (
+    id SERIAL PRIMARY KEY,
+    version INTEGER NOT NULL,
+);
+INSERT INTO migrations VALUES (version) (2);

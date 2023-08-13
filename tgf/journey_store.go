@@ -6,12 +6,13 @@ import (
 )
 
 type Journey struct {
-	ID             string `db:"id"`
-	TelegramChatID int64  `db:"telegram_chat_id"`
-	ChatID         int64  `db:"chat_id"`
-	Command        string `db:"command"`
-	Next           int    `db:"next"`
-	RawContext     []byte `db:"context"`
+	ID              string
+	TelegramChatID  int64
+	ChatID          int64
+	Command         string
+	Next            int
+	RawContext      []byte
+	MessagesCleanup []int
 }
 
 var (
