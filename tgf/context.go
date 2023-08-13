@@ -19,18 +19,15 @@ type Context struct {
 	Journey *Journey
 	// Log instance of Logger initialised with the update
 	Log Logger
-
-	// This object is meant to be for injecting dependencies
-	// injected map[string]interface{}
-
-	// handleError func(err error)
-	// execHandler func()
+	// CleanupMessages for cleaning up any messages in the chat on exit
+	CleanupMessages []int
 
 	handlers       []HandlerFunc
 	nextHasBeenSet bool
 	skipTo         func(int)
 	exit           func()
 	changeJourney  func(string, int)
+	bot            *tgbotapi.BotAPI
 }
 
 // GetChatID - returns chatid from the message with GetMessage(), returns 0 if no message found

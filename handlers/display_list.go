@@ -90,12 +90,13 @@ func (h *DisplayListHandler) GetHandlerJourney() []tgf.HandlerFunc {
 
 			msg := tgbotapi.NewMessage(chatID, "Please chose the list to display")
 			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(kbRows...)
-			_, err = h.sendMsg(msg)
+			sentMessage, err := h.sendMsg(msg)
 			if err != nil {
 				ctx.Log.Error("Error sending message %w", err)
 				return err
 			}
 
+			ctx.CleanupMessages = append(ctx.CleanupMessages, sentMessage.MessageID)
 			return ctx.SetContexData(c)
 		},
 		func(ctx *tgf.Context) error {
@@ -198,12 +199,12 @@ func (h *DisplayListHandler) GetHandlerJourney() []tgf.HandlerFunc {
 				c.ItemsKeyboardEditable = !c.ItemsKeyboardEditable
 				ctx.Log.Info("setting editable", "editable", c.ItemsKeyboardEditable)
 			case "done":
-				deleteMsg := tgbotapi.NewDeleteMessage(chatID, message.MessageID)
-				_, err = h.botReq(deleteMsg)
-				if err != nil {
-					ctx.Log.Error("Error deleting inline keyboard", "error", err)
-					return fmt.Errorf("error making bot request: %w", err)
-				}
+				// deleteMsg := tgbotapi.NewDeleteMessage(chatID, message.MessageID)
+				// _, err = h.botReq(deleteMsg)
+				// if err != nil {
+				// 	ctx.Log.Error("Error deleting inline keyboard", "error", err)
+				// 	return fmt.Errorf("error making bot request: %w", err)
+				// }
 				ctx.Exit()
 				return nil
 			default:

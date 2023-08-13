@@ -92,6 +92,7 @@ func (b *Bot) handleUpdate(update tgbotapi.Update) {
 		Update:         update,
 		nextHasBeenSet: false,
 		Log:            b.log,
+		bot:            b.bot,
 	}
 	chatID := ctx.GetChatID()
 
@@ -176,6 +177,17 @@ func (b *Bot) createCallbacks(ctx *Context) {
 	}
 
 	ctx.exit = func() {
+		if len(ctx.CleanupMessages) > 0 {
+			b.log.Debug("[CLEANUP]: message(s) to delete: %d", len(ctx.CleanupMessages))
+			for _, messageID := range ctx.CleanupMessages {
+				deleteMsg := tgbotapi.NewDeleteMessage(ctx.GetChatID(), messageID)
+				_, err := b.bot.Request(deleteMsg)
+				if err != nil {
+					b.log.Error("[BOT ERROR]: trying to cleanup messages: %w", err)
+				}
+			}
+		}
+
 		b.log.Debug("[SCHEDULER]: cleaning up index: %s", ctx.Journey.Next)
 		err := b.journeyStore.CleanupChatJourney(ctx.GetChatID())
 		if err != nil {
