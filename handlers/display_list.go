@@ -96,7 +96,7 @@ func (h *DisplayListHandler) GetHandlerJourney() []tgf.HandlerFunc {
 				return err
 			}
 
-			ctx.Journey.MessagesCleanup = append(ctx.Journey.MessagesCleanup, sentMessage.MessageID)
+			ctx.AddMsgToCleanup(sentMessage.MessageID)
 			return ctx.SetContexData(c)
 		},
 		func(ctx *tgf.Context) error {
@@ -199,12 +199,6 @@ func (h *DisplayListHandler) GetHandlerJourney() []tgf.HandlerFunc {
 				c.ItemsKeyboardEditable = !c.ItemsKeyboardEditable
 				ctx.Log.Info("setting editable", "editable", c.ItemsKeyboardEditable)
 			case "done":
-				// deleteMsg := tgbotapi.NewDeleteMessage(chatID, message.MessageID)
-				// _, err = h.botReq(deleteMsg)
-				// if err != nil {
-				// 	ctx.Log.Error("Error deleting inline keyboard", "error", err)
-				// 	return fmt.Errorf("error making bot request: %w", err)
-				// }
 				ctx.Exit()
 				return nil
 			default:

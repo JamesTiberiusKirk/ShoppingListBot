@@ -46,7 +46,7 @@ func (h *AddItemsHandler) GetHandlerJourney() []tgf.HandlerFunc {
 		chatRegistered(h.sendMsg, h.checkRegistration),
 		func(ctx *tgf.Context) error {
 			ctx.Log.Info("[HANDLER]: Add Items Handler")
-
+			ctx.AddMsgToCleanup(ctx.GetMessage().MessageID)
 			chatID := ctx.GetChatID()
 			lists, err := h.getLists(chatID)
 			if err != nil {
@@ -76,12 +76,13 @@ func (h *AddItemsHandler) GetHandlerJourney() []tgf.HandlerFunc {
 
 			msg := tgbotapi.NewMessage(chatID, "Please chose the list to add items to")
 			msg.ReplyMarkup = h.builldListsKeyboard(c)
-			_, err = h.sendMsg(msg)
+			m, err := h.sendMsg(msg)
 			if err != nil {
 				ctx.Log.Error("Error sending message %w", err)
 				return err
 			}
 
+			ctx.AddMsgToCleanup(m.MessageID)
 			return ctx.SetContexData(c)
 		},
 		func(ctx *tgf.Context) error {

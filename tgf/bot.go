@@ -176,7 +176,6 @@ func (b *Bot) createCallbacks(ctx *Context) {
 	}
 
 	ctx.exit = func() {
-		b.log.Debug("[EXIT]: message(s) to delete: %d", len(ctx.Journey.MessagesCleanup))
 		if len(ctx.Journey.MessagesCleanup) > 0 {
 			b.log.Debug("[CLEANUP]: message(s) to delete: %d", len(ctx.Journey.MessagesCleanup))
 			for _, messageID := range ctx.Journey.MessagesCleanup {
@@ -188,7 +187,7 @@ func (b *Bot) createCallbacks(ctx *Context) {
 			}
 		}
 
-		b.log.Debug("[SCHEDULER]: cleaning up index: %s", ctx.Journey.Next)
+		b.log.Debug("[SCHEDULER]: cleaning up index: %d", ctx.Journey.Next)
 		err := b.journeyStore.CleanupChatJourney(ctx.GetChatID())
 		if err != nil {
 			b.log.Error("[DB ERROR]: trying to cleanup handler journey DB: %w", err)
@@ -217,7 +216,7 @@ func (b *Bot) handleHandlerError(ctx *Context, err error) {
 		return
 	}
 
-	b.log.Debug("[SCHEDULER]: cleaning up index: %s", ctx.Journey.Next)
+	b.log.Debug("[SCHEDULER]: cleaning up index: %d", ctx.Journey.Next)
 	err = b.journeyStore.CleanupChatJourney(ctx.GetChatID())
 	if err != nil {
 		b.log.Error("[DB ERROR]: trying to cleanup handler journey DB: %w", err)
