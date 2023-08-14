@@ -4,7 +4,7 @@ import (
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/config"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/handlers"
-	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
+	"github.com/JamesTiberiusKirk/tgf"
 )
 
 var version = "development"

@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
+	"github.com/JamesTiberiusKirk/tgf"
 )
 
 type DBJourneyStore struct {

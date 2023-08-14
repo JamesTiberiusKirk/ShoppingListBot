@@ -7,6 +7,7 @@ require github.com/joho/godotenv v1.5.1
 require github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 
 require (
+	github.com/JamesTiberiusKirk/tgf v0.0.0-20230814124134-c244d4756dda
 	github.com/inconshreveable/log15 v2.16.0+incompatible
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/knadh/goyesql v2.0.0+incompatible

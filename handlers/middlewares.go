@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
+	"github.com/JamesTiberiusKirk/tgf"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 

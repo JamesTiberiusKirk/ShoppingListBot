@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/JamesTiberiusKirk/ShoppingListsBot/tgf"
+	"github.com/JamesTiberiusKirk/tgf"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
