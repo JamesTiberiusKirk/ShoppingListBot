@@ -53,17 +53,17 @@ func (l *DefaultLogger) getFileName() string {
 
 func (l *DefaultLogger) Info(format string, v ...any) {
 	prefix := l.getFileName()
-	l.infoLogger.Printf(prefix+"[INFO]: "+format, v...)
+	l.infoLogger.Printf(prefix+"[INFO]:\t\t"+format, v...)
 }
 
 func (l *DefaultLogger) Error(format string, v ...any) {
 	prefix := l.getFileName()
-	l.errorLogger.Printf(prefix+"[ERROR]: "+format, v...)
+	l.errorLogger.Printf(prefix+"[ERROR]:\t"+format, v...)
 }
 
 func (l *DefaultLogger) Warn(format string, v ...any) {
 	prefix := l.getFileName()
-	l.warningLogger.Printf(prefix+"[WARN]: "+format, v...)
+	l.warningLogger.Printf(prefix+"[WARN]:\t"+format, v...)
 }
 
 func (l *DefaultLogger) Debug(format string, v ...any) {
@@ -71,7 +71,7 @@ func (l *DefaultLogger) Debug(format string, v ...any) {
 		return
 	}
 	prefix := l.getFileName()
-	l.debugLogger.Printf(prefix+"[DEBUG]: "+format, v...)
+	l.debugLogger.Printf(prefix+"[DEBUG]:\t"+format, v...)
 }
 
 func (l *DefaultLogger) LogUpdate(u tgbotapi.Update) {
@@ -89,6 +89,6 @@ func (l *DefaultLogger) LogUpdate(u tgbotapi.Update) {
 	messageJSON, _ := json.Marshal(u.Message)
 	callbackQueryJSON, _ := json.Marshal(u.CallbackQuery)
 
-	l.infoLogger.Printf(prefix+"[UPDATE]: updateID: %d, chatID: %d, userID: %d, messageJSON: %s, callbackQueryJSON: %s",
+	l.infoLogger.Printf(prefix+"[UPDATE]:\tupdateID: %d, chatID: %d, userID: %d, messageJSON: %s, callbackQueryJSON: %s",
 		updateID, chatID, userID, messageJSON, callbackQueryJSON)
 }
