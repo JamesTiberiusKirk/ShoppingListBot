@@ -69,7 +69,7 @@ func (b *Bot) StartBot(debug bool) error {
 }
 
 func (b *Bot) handleUpdate(update tgbotapi.Update) {
-	b.log.SetUpdate(update)
+	b.log.LogUpdate(update)
 	if update.Message == nil && update.CallbackQuery == nil {
 		return
 	}

@@ -15,12 +15,18 @@ func (d *DB) UpsertJourneyByTelegeramChatID(chatID int64, command string, next i
 		return nil, fmt.Errorf("query missing %s", qName)
 	}
 
+	c := context
+	if len(context) == 0 {
+		c = []byte("{}")
+	}
+
+	assertedArray := pq.Array(messagesCleanup)
 	namedExecParams := map[string]interface{}{
 		"telegram_chat_id": chatID,
 		"command":          command,
 		"next":             next,
-		"context":          context,
-		"messages_cleanup": pq.Array(messagesCleanup),
+		"context":          c,
+		"messages_cleanup": assertedArray,
 	}
 
 	rows, err := d.DB.NamedQuery(query.Query, namedExecParams)
