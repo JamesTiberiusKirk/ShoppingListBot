@@ -35,10 +35,10 @@ func (l *DefaultLogger) SetUpdate(update tgbotapi.Update) {
 func NewDefaultLogger(debug bool) *DefaultLogger {
 	flags := log.Ldate | log.Ltime | log.LstdFlags
 
-	infoLogger := log.New(os.Stdout, "INFO: ", flags)
-	warningLogger := log.New(os.Stdout, "WARNING: ", flags)
-	debugLogger := log.New(os.Stdout, "DEBUG: ", flags)
-	errorLogger := log.New(os.Stderr, "ERROR: ", flags)
+	infoLogger := log.New(os.Stdout, "", flags)
+	warningLogger := log.New(os.Stdout, "", flags)
+	debugLogger := log.New(os.Stdout, "", flags)
+	errorLogger := log.New(os.Stderr, "", flags)
 
 	return &DefaultLogger{
 		infoLogger:    infoLogger,
@@ -57,17 +57,17 @@ func (l *DefaultLogger) getFileName() string {
 
 func (l *DefaultLogger) Info(format string, v ...any) {
 	prefix := l.getFileName()
-	l.infoLogger.Printf(prefix+format, v...)
+	l.infoLogger.Printf(prefix+"[INFO]: "+format, v...)
 }
 
 func (l *DefaultLogger) Error(format string, v ...any) {
 	prefix := l.getFileName()
-	l.errorLogger.Printf(prefix+format, v...)
+	l.errorLogger.Printf(prefix+"[ERROR]: "+format, v...)
 }
 
 func (l *DefaultLogger) Warn(format string, v ...any) {
 	prefix := l.getFileName()
-	l.warningLogger.Printf(prefix+format, v...)
+	l.warningLogger.Printf(prefix+"[WARN]: "+format, v...)
 }
 
 func (l *DefaultLogger) Debug(format string, v ...any) {
@@ -75,7 +75,7 @@ func (l *DefaultLogger) Debug(format string, v ...any) {
 		return
 	}
 	prefix := l.getFileName()
-	l.debugLogger.Printf(prefix+format, v...)
+	l.debugLogger.Printf(prefix+"[DEBUG]: "+format, v...)
 }
 
 // TODO: Implement
