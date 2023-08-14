@@ -1,6 +1,7 @@
 package tgf
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -15,8 +16,7 @@ type Logger interface {
 	Error(string, ...any)
 	Warn(string, ...any)
 	Debug(string, ...any)
-	SetUpdate(tgbotapi.Update)
-	LogUpdate()
+	LogUpdate(tgbotapi.Update)
 }
 
 type DefaultLogger struct {
@@ -26,10 +26,6 @@ type DefaultLogger struct {
 	errorLogger   *log.Logger
 	update        tgbotapi.Update
 	debug         bool
-}
-
-func (l *DefaultLogger) SetUpdate(update tgbotapi.Update) {
-	l.update = update
 }
 
 func NewDefaultLogger(debug bool) *DefaultLogger {
@@ -78,8 +74,21 @@ func (l *DefaultLogger) Debug(format string, v ...any) {
 	l.debugLogger.Printf(prefix+"[DEBUG]: "+format, v...)
 }
 
-// TODO: Implement
-func (l *DefaultLogger) LogUpdate() {
+func (l *DefaultLogger) LogUpdate(u tgbotapi.Update) {
 	prefix := l.getFileName()
-	l.infoLogger.Printf(prefix + "UPDATE: NEED TO IMPLEMENT")
+
+	message := u.Message
+	if message == nil {
+		message = u.CallbackQuery.Message
+	}
+
+	updateID := u.UpdateID
+	chatID := message.Chat.ID
+	userID := message.From.ID
+
+	messageJSON, _ := json.Marshal(u.Message)
+	callbackQueryJSON, _ := json.Marshal(u.CallbackQuery)
+
+	l.infoLogger.Printf(prefix+"[UPDATE]: updateID: %d, chatID: %d, userID: %d, messageJSON: %s, callbackQueryJSON: %s",
+		updateID, chatID, userID, messageJSON, callbackQueryJSON)
 }
