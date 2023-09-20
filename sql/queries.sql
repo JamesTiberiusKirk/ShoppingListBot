@@ -94,3 +94,28 @@ WHERE chat_id = (
     SELECT id FROM chats WHERE telegram_chat_id = $1
 );
 
+
+
+
+-- USUALS --
+
+-- name: get_all_usuals
+SELECT * from usuals;
+
+-- name: get_usual_by_id
+SELECT * from usuals WHERE id = $1;
+
+-- name: add_usuals;
+INSERT INTO usuals (id, name, image_path, store) VALUES (
+    :id,
+    :name, 
+    :image_path, 
+    :store,
+) ON CONFLICT (id) DO UPDATE SET 
+    name = EXCLUDED.name,
+    image_path = EXCLUDED.image_path,
+    store = EXCLUDED.store
+RETURNING *;
+
+-- name: remove_usual
+DELETE FROM usuals WHERE id = $1;

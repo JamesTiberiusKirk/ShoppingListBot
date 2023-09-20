@@ -29,8 +29,19 @@ CREATE TABLE IF NOT EXISTS chat_journies (
     messages_cleanup INTEGER[]
     FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS usuals (
+    id SERIAL PRIMARY KEY,
+    chat_id INTEGER NOT NULL,
+    name VARCHAR(255),
+    image_path VARCHAR(255),
+    store VARCHAR(255)
+    FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS migrations (
     id SERIAL PRIMARY KEY,
     version INTEGER NOT NULL,
 );
-INSERT INTO migrations VALUES (version) (2);
+INSERT INTO migrations (id, version)
+VALUES (1, 3)
+ON CONFLICT (id)
+DO UPDATE SET version = EXCLUDED.version;
