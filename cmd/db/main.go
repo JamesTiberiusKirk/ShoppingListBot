@@ -2,12 +2,28 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/url"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/config"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
 )
+
+func sortArray(arr []int) []int {
+	for i := 0; i <= len(arr)-1; i++ {
+		for j := 0; j < len(arr)-1-i; j++ {
+			if arr[j] > arr[j+1] {
+				arr[j], arr[j+1] = arr[j+1], arr[j]
+			}
+		}
+	}
+	return arr
+}
 
 func obfuscatePassword(connURL string) (string, error) {
 	parsedURL, err := url.Parse(connURL)
@@ -30,21 +46,68 @@ func applySchema(dbc *db.DB) {
 }
 
 func applyMigration(dbc *db.DB) {
-	// type row struct {
-	// 	ID      string `db:"id"`
-	// 	Version int    `db:"version"`
-	// }
-	// var r []row
-	// err := dbc.DB.Select(&r, "SELECT * FROM migrations")
-	// if err != nil {
-	// 	log.Printf("Error quering migrations table: %s", err.Error())
-	// 	panic(err)
-	// }
-	//
-	// lastVersion := r[0].Version
-	//
-}
+	type row struct {
+		ID      string `db:"id"`
+		Version int    `db:"version"`
+	}
+	var r row
+	err := dbc.DB.QueryRowx("SELECT * FROM migrations WHERE id = 1").StructScan(&r)
+	if err != nil {
+		log.Printf("Error quering migrations table: %s", err.Error())
+		panic(err)
+	}
+	log.Printf("curent migration level: %d", r.Version)
 
+	files, err := ioutil.ReadDir("./sql/migrations")
+	if err != nil {
+		log.Printf("Error opening migrations directory: %s", err.Error())
+		panic(err)
+	}
+
+	var toApply []int
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		split := strings.Split(file.Name(), ".")
+		level, err := strconv.Atoi(split[0])
+		if err != nil {
+			log.Printf("Could not parse migrations: %s", err.Error())
+			panic(err)
+		}
+
+		if level > r.Version {
+			toApply = append(toApply, level)
+		}
+	}
+
+	if len(toApply) == 0 {
+		log.Print("No new migrations")
+		return
+	}
+
+	if len(toApply) > 1 {
+		toApply = sortArray(toApply)
+	}
+
+	for _, l := range toApply {
+		migration, err := os.ReadFile(fmt.Sprintf("./sql/migrations/%d.sql", l))
+		if err != nil {
+			log.Printf("Could not read migration file %d: %s", l, err.Error())
+			panic(err)
+		}
+
+		_, err = dbc.DB.Exec(string(migration))
+		if err != nil {
+			log.Printf("Could execute migration file %d: %s", l, err.Error())
+			panic(err)
+		}
+		log.Printf("Applied migration: %d", l)
+	}
+
+}
 func main() {
 	c := config.GetConfig()
 

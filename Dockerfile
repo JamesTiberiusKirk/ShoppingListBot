@@ -4,6 +4,7 @@ ADD . /build/
 WORKDIR /build 
 RUN go get ./...
 RUN go build -ldflags "-X main.version=production`date -u +.%Y%m%d.%H%M%S`" -o shopping-list-bot 
+RUN go run cmd/db/main.go -action migration                                                                                             ─╯
 
 FROM alpine
 COPY --from=builder /build/shopping-list-bot /app/
