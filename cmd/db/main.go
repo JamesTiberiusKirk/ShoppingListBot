@@ -99,12 +99,24 @@ func applyMigration(dbc *db.DB) {
 			panic(err)
 		}
 
-		_, err = dbc.DB.Exec(string(migration))
+		tx := dbc.DB.MustBegin()
+		tx.MustExec(string(migration))
+		tx.MustExec(`
+			INSERT INTO migrations (id, version)
+			VALUES (1, $1)
+			ON CONFLICT (id)
+			DO UPDATE SET version = EXCLUDED.version;
+		`, r.Version)
+
+		err = tx.Commit()
 		if err != nil {
-			log.Printf("Could execute migration file %d: %s", l, err.Error())
+			log.Print("failed to commit transaction")
 			panic(err)
 		}
+
 		log.Printf("Applied migration: %d", l)
+		log.Printf("Upgraded migration version number: %d", l)
+
 	}
 
 }
