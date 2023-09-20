@@ -56,7 +56,7 @@ func applyMigration(dbc *db.DB) {
 		log.Printf("Error quering migrations table: %s", err.Error())
 		panic(err)
 	}
-	log.Printf("curent migration level: %d", r.Version)
+	log.Printf("Curent migration level: %d", r.Version)
 
 	files, err := ioutil.ReadDir("./sql/migrations")
 	if err != nil {
@@ -99,14 +99,25 @@ func applyMigration(dbc *db.DB) {
 			panic(err)
 		}
 
-		tx := dbc.DB.MustBegin()
-		tx.MustExec(string(migration))
-		tx.MustExec(`
+		tx, err := dbc.DB.Begin()
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = tx.Exec(string(migration))
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = tx.Exec(fmt.Sprintf(`
 			INSERT INTO migrations (id, version)
-			VALUES (1, $1)
+			VALUES (1, %d)
 			ON CONFLICT (id)
 			DO UPDATE SET version = EXCLUDED.version;
-		`, r.Version)
+		`, l))
+		if err != nil {
+			panic(err)
+		}
 
 		err = tx.Commit()
 		if err != nil {
