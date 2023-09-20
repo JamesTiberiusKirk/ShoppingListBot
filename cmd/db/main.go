@@ -109,6 +109,8 @@ func applyMigration(dbc *db.DB) {
 
 }
 func main() {
+	log.Print("------------------------------------------------------------")
+	log.Print("MIGRATOR")
 	c := config.GetConfig()
 
 	dbc, err := db.NewDBClient(c.DbUrl)
@@ -134,5 +136,5 @@ func main() {
 	default:
 		flag.PrintDefaults()
 	}
-
+	log.Print("------------------------------------------------------------")
 }
