@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/config"
 	"github.com/JamesTiberiusKirk/ShoppingListsBot/db"
+	"github.com/JamesTiberiusKirk/tgf"
 )
 
 func sortArray(arr []int) []int {
@@ -40,7 +40,7 @@ func obfuscatePassword(connURL string) (string, error) {
 func applySchema(dbc *db.DB) {
 	err := dbc.ApplySchema()
 	if err != nil {
-		log.Printf("Error applying schema: %s", err.Error())
+		log.Info("Error applying schema: %s", err.Error())
 		panic(err)
 	}
 }
@@ -53,14 +53,14 @@ func applyMigration(dbc *db.DB) {
 	var r row
 	err := dbc.DB.QueryRowx("SELECT * FROM migrations WHERE id = 1").StructScan(&r)
 	if err != nil {
-		log.Printf("Error quering migrations table: %s", err.Error())
+		log.Error("Error quering migrations table: %s", err.Error())
 		panic(err)
 	}
-	log.Printf("Curent migration level: %d", r.Version)
+	log.Info("Curent migration level: %d", r.Version)
 
 	files, err := ioutil.ReadDir("./sql/migrations")
 	if err != nil {
-		log.Printf("Error opening migrations directory: %s", err.Error())
+		log.Error("Error opening migrations directory: %s", err.Error())
 		panic(err)
 	}
 
@@ -74,7 +74,7 @@ func applyMigration(dbc *db.DB) {
 		split := strings.Split(file.Name(), ".")
 		level, err := strconv.Atoi(split[0])
 		if err != nil {
-			log.Printf("Could not parse migrations: %s", err.Error())
+			log.Error("Could not parse migrations: %s", err.Error())
 			panic(err)
 		}
 
@@ -84,7 +84,7 @@ func applyMigration(dbc *db.DB) {
 	}
 
 	if len(toApply) == 0 {
-		log.Print("No new migrations")
+		log.Info("No new migrations")
 		return
 	}
 
@@ -95,17 +95,19 @@ func applyMigration(dbc *db.DB) {
 	for _, l := range toApply {
 		migration, err := os.ReadFile(fmt.Sprintf("./sql/migrations/%d.sql", l))
 		if err != nil {
-			log.Printf("Could not read migration file %d: %s", l, err.Error())
+			log.Error("Could not read migration file %d: %s", l, err.Error())
 			panic(err)
 		}
 
 		tx, err := dbc.DB.Begin()
 		if err != nil {
+			log.Error("Error begining transaction: %s", err.Error())
 			panic(err)
 		}
 
 		_, err = tx.Exec(string(migration))
 		if err != nil {
+			log.Error("Error executing migration itself: %s", err.Error())
 			panic(err)
 		}
 
@@ -116,24 +118,30 @@ func applyMigration(dbc *db.DB) {
 			DO UPDATE SET version = EXCLUDED.version;
 		`, l))
 		if err != nil {
+			log.Error("Error executing version upgrate in db transaction: %s", err.Error())
 			panic(err)
 		}
 
 		err = tx.Commit()
 		if err != nil {
-			log.Print("failed to commit transaction")
+			log.Error("failed to commit transaction")
 			panic(err)
 		}
 
-		log.Printf("Applied migration: %d", l)
-		log.Printf("Upgraded migration version number: %d", l)
-
+		log.Info("Applied migration: %d", l)
+		log.Info("Upgraded migration version number: %d", l)
 	}
-
 }
+
+var (
+	log tgf.Logger
+)
+
 func main() {
-	log.Print("------------------------------------------------------------")
-	log.Print("MIGRATOR")
+	log = tgf.NewDefaultLogger(false)
+
+	log.Info("------------------------------------------------------------")
+	log.Info("MIGRATOR")
 	c := config.GetConfig()
 
 	dbc, err := db.NewDBClient(c.DbUrl)
@@ -151,13 +159,13 @@ func main() {
 
 	switch *action {
 	case "schema":
-		log.Printf("Applying schema to db: %s", url)
+		log.Info("Applying schema to db: %s", url)
 		applySchema(dbc)
 	case "migration":
-		log.Printf("Applying migration to db: %s", url)
+		log.Info("Applying migration to db: %s", url)
 		applyMigration(dbc)
 	default:
 		flag.PrintDefaults()
 	}
-	log.Print("------------------------------------------------------------")
+	log.Info("------------------------------------------------------------")
 }
